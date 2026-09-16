@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User{
+  id          String       @id @default(uuid())
+  name        String
+  email       String       @unique
+  password    String
+  createdAt   DateTime     @default(now())
+  persona     Persona[]
+  scenarios   Scenario[]
+  simulations Simulation[]
+}
+
+model Persona{
+  id String @id @default(uuid())
+  name String
+  age Int
+  gender String?
+  education String?
+  income Float
+  savings Float
+  monthly_expenses Float
+  wealth Float
+  debt Float
+  risk_appetite String
+  spending_behavior String?
+  saving_preference String?
+  investment_preference String?
+  createdAt DateTime @default(now())
+  user_id String
+  user User @relation(references:[id],fields:[user_id])
+}
+model Scenario{
+    id String @id @default(uuid())
+    scenario_name String
+    inflation_rate Float
+    interest_rate Float
+    unemployment_rate Float
+    market_volatility Float
+    createdAt DateTime @default(now())
+    user_id String
+    user User @relation(references:[id],fields:[user_id])
+}
+
+model Simulation{
+  id                 String   @id @default(uuid())
+  persona_name       String
+  scenario_name      String
+  summary            String
+  decisions          Json
+  confidence         Json
+  behavioral_traits  Json
+  theory_alignment   Json
+  reasoning          Json
+  createdAt          DateTime @default(now())
+  user_id            String
+  user               User     @relation(references:[id],fields:[user_id])
+}
+
+model OtpVerification {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  otp       String
+  name      String
+  password  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
