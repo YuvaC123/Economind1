@@ -17,23 +17,22 @@ interface SendOtpResponse {
   devOtp?: string
 }
 
+// >>> START: DIRECT SIGNUP AUTH CONTEXT INTERFACE <<<
 interface AuthContextValue {
   user: AuthUser | null
   token: string | null
   isLoading: boolean
   signin: (email: string, password: string) => Promise<void>
   signup: (name: string, email: string, password: string) => Promise<void>
-  sendSignupOtp: (name: string, email: string, password: string) => Promise<SendOtpResponse>
-  verifySignupOtp: (email: string, otp: string) => Promise<void>
-  resendSignupOtp: (email: string) => Promise<SendOtpResponse>
   signout: () => void
 }
+// <<< END: DIRECT SIGNUP AUTH CONTEXT INTERFACE >>>
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/$/, '')
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -96,9 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persist(data.token, data.user)
   }
 
-  // ── sendSignupOtp ──────────────────────────────────────────────────────────
-  const sendSignupOtp = async (name: string, email: string, password: string): Promise<SendOtpResponse> => {
-    const res = await fetch(`${API_URL}/send-otp`, {
+  // >>> START: DIRECT SIGNUP METHOD (REPLACED OTP METHODS) <<<
+  const signup = async (name: string, email: string, password: string) => {
+    const res = await fetch(`${API_URL}/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
@@ -107,50 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json()
 
     if (!res.ok) {
-      throw new Error(data.msg ?? 'Failed to send verification code')
-    }
-
-    return data
-  }
-
-  // ── verifySignupOtp ────────────────────────────────────────────────────────
-  const verifySignupOtp = async (email: string, otp: string) => {
-    const res = await fetch(`${API_URL}/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, otp }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      throw new Error(data.msg ?? 'Verification failed')
+      throw new Error(data.msg ?? 'Signup failed')
     }
 
     persist(data.token, data.user)
   }
-
-  // ── resendSignupOtp ────────────────────────────────────────────────────────
-  const resendSignupOtp = async (email: string): Promise<SendOtpResponse> => {
-    const res = await fetch(`${API_URL}/resend-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      throw new Error(data.msg ?? 'Failed to resend code')
-    }
-
-    return data
-  }
-
-  // ── signup (Direct fallback / legacy support) ──────────────────────────────
-  const signup = async (name: string, email: string, password: string) => {
-    await sendSignupOtp(name, email, password)
-  }
+  // <<< END: DIRECT SIGNUP METHOD >>>
 
   // ── signout ────────────────────────────────────────────────────────────────
   const signout = () => {
@@ -165,9 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         signin,
         signup,
-        sendSignupOtp,
-        verifySignupOtp,
-        resendSignupOtp,
         signout,
       }}
     >

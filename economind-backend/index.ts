@@ -11,7 +11,6 @@ import { authMiddleware, AuthedRequest } from './middleware/auth.js'
 const app = express()
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-// ─── CORS ─────────────────────────────────────────────────────────────────────
 const configuredOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map((u) => u.trim().replace(/\/$/, ''))
   : []
@@ -19,12 +18,17 @@ const allowedOrigins = Array.from(
   new Set(['http://localhost:3000', 'http://localhost:3001', ...configuredOrigins])
 )
 
+// >>> START: CORS FIX (ALLOWS ALL VERCEL DOMAINS & PREVIEWS) <<<
 app.use(
   cors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true)
       const cleanOrigin = origin.replace(/\/$/, '')
-      if (allowedOrigins.includes(cleanOrigin) || allowedOrigins.includes('*')) {
+      if (
+        allowedOrigins.includes(cleanOrigin) ||
+        allowedOrigins.includes('*') ||
+        cleanOrigin.endsWith('.vercel.app')
+      ) {
         return cb(null, true)
       }
       cb(new Error(`CORS: origin '${origin}' not allowed`), false)
@@ -32,18 +36,24 @@ app.use(
     credentials: true,
   })
 )
+// <<< END: CORS FIX >>>
 
 app.use(express.json())
+
+// Normalize accidental double slashes in URL (e.g. //send-otp -> /send-otp)
+app.use((req, _res, next) => {
+  if (req.url.startsWith('//')) {
+    req.url = req.url.replace(/^\/+/, '/')
+  }
+  next()
+})
 
 const JWT_SECRET = process.env.JWT_SECRET as string
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-import { sendOtpEmail } from './lib/mailer.js'
-
-// ─── Zod Schemas ───────────────────────────────────────────────────────────
-
-const SendOtpSchema = z.object({
+// >>> START: DIRECT SIGNUP SCHEMA (REPLACED OTP SCHEMAS) <<<
+const SignupSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(50, 'Name must not exceed 50 characters'),
   email: z.string().trim().email('Invalid email address').max(100, 'Email must not exceed 100 characters'),
   password: z.string().min(6, 'Password must be between 6 and 64 characters').max(64, 'Password must not exceed 64 characters'),
@@ -53,26 +63,7 @@ const SigninSchema = z.object({
   email: z.string().trim().email('Invalid email address').max(100, 'Email must not exceed 100 characters'),
   password: z.string().min(1, 'Password is required').max(64, 'Password must not exceed 64 characters'),
 })
-
-const VerifyOtpSchema = z.object({
-  email: z.string().trim().email('Invalid email address').max(100),
-  otp: z.string().trim().length(6, 'OTP must be exactly 6 digits'),
-})
-
-const ResendOtpSchema = z.object({
-  email: z.string().trim().email('Invalid email address').max(100),
-})
-
-// ─── In-Memory OTP Store (Resilient Storage) ───────────────────────────────
-
-interface PendingOtpRecord {
-  otp: string
-  name: string
-  hashedPassword: string
-  expiresAt: number
-}
-
-const otpStore = new Map<string, PendingOtpRecord>()
+// <<< END: DIRECT SIGNUP SCHEMA >>>
 
 const PersonaSchema = z.object({
   name: z.string().trim().min(1, 'Persona name is required').max(50, 'Persona name must not exceed 50 characters'),
@@ -103,9 +94,9 @@ app.get("/health",async(req:Request,res:Response):Promise<any>=>{
     return res.status(202).json({'msg':"Server is up and healthy"})
 })
 
-// ─── OTP Based Signup: Step 1 - Send OTP ─────────────────────────────────────
-app.post("/send-otp", async (req: Request, res: Response): Promise<any> => {
-    const parseResult = SendOtpSchema.safeParse(req.body)
+// >>> START: DIRECT SIGNUP ROUTE (REPLACED OTP ROUTES) <<<
+app.post("/signup", async (req: Request, res: Response): Promise<any> => {
+    const parseResult = SignupSchema.safeParse(req.body)
     if (!parseResult.success) {
         return res.status(400).json({ 
             msg: parseResult.error.issues[0]?.message ?? "Invalid input" 
@@ -116,202 +107,39 @@ app.post("/send-otp", async (req: Request, res: Response): Promise<any> => {
     const normalizedEmail = email.trim().toLowerCase()
 
     try {
-        // Check if email is already registered
-        try {
-            const existingUser = await prisma.user.findUnique({
-                where: { email: normalizedEmail }
+        const existingUser = await prisma.user.findUnique({
+            where: { email: normalizedEmail }
+        })
+
+        if (existingUser) {
+            return res.status(409).json({ 
+                msg: "An account with this email already exists. Please log in." 
             })
-            if (existingUser) {
-                return res.status(409).json({ 
-                    msg: "An account with this email already exists. Please log in." 
-                })
-            }
-        } catch (dbErr) {
-            console.warn("DB check bypassed:", dbErr instanceof Error ? dbErr.message : dbErr)
         }
 
-        // Generate 6-digit OTP and hash password
-        const otp = Math.floor(100000 + Math.random() * 900000).toString()
         const hashedPassword = await bcrypt.hash(password, 10)
-        const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
 
-        // Save to in-memory store
-        otpStore.set(normalizedEmail, {
-            otp,
-            name: name.trim(),
-            hashedPassword,
-            expiresAt,
-        })
-
-        // Also persist to DB if connected
-        try {
-            await (prisma as any).otpVerification?.upsert({
-                where: { email: normalizedEmail },
-                update: {
-                    otp,
-                    name: name.trim(),
-                    password: hashedPassword,
-                    expiresAt: new Date(expiresAt),
-                },
-                create: {
-                    email: normalizedEmail,
-                    name: name.trim(),
-                    otp,
-                    password: hashedPassword,
-                    expiresAt: new Date(expiresAt),
-                }
-            })
-        } catch (dbErr) {
-            // Memory store will handle it safely
-        }
-
-        // Dispatch email in background (non-blocking for instant client response)
-        sendOtpEmail({
-            email: normalizedEmail,
-            name: name.trim(),
-            otp,
-        }).catch((emailErr) => {
-            console.error("Async sendOtpEmail error:", emailErr)
-        })
-
-        return res.status(200).json({
-            msg: "Verification code is being sent to your email",
-            email: normalizedEmail,
-            expiresInSeconds: 600,
-        })
-    } catch (error) {
-        console.error("send-otp error:", error)
-        return res.status(500).json({ msg: "Failed to process signup request", error })
-    }
-})
-
-// ─── OTP Based Signup: Resend OTP ───────────────────────────────────────────
-app.post("/resend-otp", async (req: Request, res: Response): Promise<any> => {
-    const parseResult = ResendOtpSchema.safeParse(req.body)
-    if (!parseResult.success) {
-        return res.status(400).json({ msg: "Valid email is required" })
-    }
-
-    const normalizedEmail = parseResult.data.email.trim().toLowerCase()
-    const existing = otpStore.get(normalizedEmail)
-
-    if (!existing) {
-        return res.status(400).json({ 
-            msg: "No pending signup found for this email. Please restart signup." 
-        })
-    }
-
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString()
-    existing.otp = newOtp
-    existing.expiresAt = Date.now() + 10 * 60 * 1000
-    otpStore.set(normalizedEmail, existing)
-
-    // Dispatch email in background
-    sendOtpEmail({
-        email: normalizedEmail,
-        name: existing.name,
-        otp: newOtp,
-    }).catch((emailErr) => {
-        console.error("Async resend sendOtpEmail error:", emailErr)
-    })
-
-    return res.status(200).json({
-        msg: "New verification code sent",
-        email: normalizedEmail,
-        expiresInSeconds: 600,
-    })
-})
-
-// ─── OTP Based Signup: Step 2 - Verify OTP & Create Account ─────────────────
-app.post("/verify-otp", async (req: Request, res: Response): Promise<any> => {
-    const parseResult = VerifyOtpSchema.safeParse(req.body)
-    if (!parseResult.success) {
-        return res.status(400).json({ 
-            msg: parseResult.error.issues[0]?.message ?? "Invalid OTP format" 
-        })
-    }
-
-    const { email, otp } = parseResult.data
-    const normalizedEmail = email.trim().toLowerCase()
-
-    let record = otpStore.get(normalizedEmail)
-
-    // Check DB if not in memory
-    if (!record) {
-        try {
-            const dbRecord = await (prisma as any).otpVerification?.findUnique({
-                where: { email: normalizedEmail }
-            })
-            if (dbRecord) {
-                record = {
-                    otp: dbRecord.otp,
-                    name: dbRecord.name,
-                    hashedPassword: dbRecord.password,
-                    expiresAt: new Date(dbRecord.expiresAt).getTime(),
-                }
-            }
-        } catch (dbErr) {
-            // ignore
-        }
-    }
-
-    if (!record) {
-        return res.status(400).json({ 
-            msg: "Verification code expired or not found. Please request a new code." 
-        })
-    }
-
-    if (Date.now() > record.expiresAt) {
-        otpStore.delete(normalizedEmail)
-        return res.status(400).json({ 
-            msg: "Verification code has expired. Please request a new code." 
-        })
-    }
-
-    if (record.otp !== otp.trim()) {
-        return res.status(400).json({ 
-            msg: "Incorrect verification code. Please check and try again." 
-        })
-    }
-
-    // OTP is valid! Create the user in database
-    try {
-        let user;
-        try {
-            user = await prisma.user.create({
-                data: {
-                    email: normalizedEmail,
-                    name: record.name,
-                    password: record.hashedPassword,
-                }
-            })
-            // Clean up DB verification record
-            await (prisma as any).otpVerification?.deleteMany({
-                where: { email: normalizedEmail }
-            }).catch(() => {})
-        } catch (dbErr) {
-            // Fallback user object if DB offline
-            user = {
-                id: `usr_${Date.now()}`,
+        const user = await prisma.user.create({
+            data: {
                 email: normalizedEmail,
-                name: record.name,
+                name: name.trim(),
+                password: hashedPassword,
             }
-        }
-
-        // Clean up memory store
-        otpStore.delete(normalizedEmail)
+        })
 
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '48h' })
+
         return res.status(201).json({
-            msg: "Account verified and created successfully",
+            msg: "Account created successfully",
             token,
             user: { id: user.id, email: user.email, name: user.name }
         })
     } catch (error) {
-        console.error("verify-otp error:", error)
-        return res.status(500).json({ msg: "Failed to create account", error })
+        console.error("signup error:", error)
+        return res.status(500).json({ msg: "Failed to create account", error: String(error) })
     }
 })
+// <<< END: DIRECT SIGNUP ROUTE >>>
 
 // ─── Signin Route (for existing accounts) ────────────────────────────────────
 app.post("/signin", async (req: Request, res: Response): Promise<any> => {
@@ -629,7 +457,6 @@ app.get('/simulations', authMiddleware, async (req: AuthedRequest, res: Response
   }
 })
 
-// ─── Health Check & Root Route for Render ──────────────────────────────────
 
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -639,12 +466,10 @@ app.get('/', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'EconoMind API is active' })
 })
 
-// ─── Start with Dynamic Port & 0.0.0.0 Binding ─────────────────────────────
+// ─── Start ─────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`)
 })
-// ─── Start ─────────────────────────────────────────────────────────────────
-
