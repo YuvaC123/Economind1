@@ -55,7 +55,7 @@ export function BehavioralTraits() {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-sm font-medium leading-tight">{trait.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{trait.description}</p>
+                <p className="text-xs text-muted-foreground leading-snug">{trait.description}</p>
               </div>
               <Badge variant="outline" className="font-mono flex-shrink-0">{trait.value}%</Badge>
             </div>

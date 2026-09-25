@@ -3,7 +3,7 @@
 import { Persona } from '@/lib/mock-data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { User, Briefcase, Home, TrendingUp } from 'lucide-react'
+import { User, Briefcase, Home, TrendingUp, Pencil } from 'lucide-react'
 
 interface PersonaConfigCardProps {
   persona: Persona
@@ -22,9 +22,9 @@ export function PersonaConfigCard({ persona, onEdit }: PersonaConfigCardProps) {
     <Card className="[--card-spacing:--spacing(7)] min-w-0">
       <CardHeader className="min-w-0">
         <div className="flex items-start justify-between gap-3 min-w-0">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-sans font-semibold text-sm flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-sans font-semibold text-xs flex-shrink-0">
                 {persona.name.charAt(0)}
               </div>
               <span className="font-sans truncate min-w-0 flex-1">{persona.name}</span>
@@ -33,9 +33,10 @@ export function PersonaConfigCard({ persona, onEdit }: PersonaConfigCardProps) {
           </div>
           <button
             onClick={onEdit}
-            className="text-xs px-3 py-1.5 rounded-lg border border-border cursor-pointer hover:bg-primary/10 hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150 hover-glow flex-shrink-0"
+            title="Edit persona"
+            className="p-1.5 rounded-lg border border-border cursor-pointer hover:bg-primary/10 hover:border-primary/30 hover:text-primary active:scale-95 transition-all duration-150 hover-glow flex-shrink-0"
           >
-            Edit
+            <Pencil className="w-3.5 h-3.5" />
           </button>
         </div>
       </CardHeader>

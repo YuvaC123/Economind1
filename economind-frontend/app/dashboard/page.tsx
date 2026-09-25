@@ -231,7 +231,7 @@ export default function DashboardPage() {
               >
                 {userPersonas.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.riskAppetite}, ${p.income.toLocaleString()}/yr)
+                    {p.name} — ${(p.income / 1000).toFixed(0)}K/yr
                   </option>
                 ))}
                 <option value="default">Default: John Doe (Standard)</option>
