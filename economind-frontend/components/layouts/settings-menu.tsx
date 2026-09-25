@@ -23,7 +23,7 @@ export function SettingsMenu() {
   const handleSignOut = () => {
     setOpen(false)
     signout()
-    router.replace('/login')
+    window.location.href = '/login'
   }
 
   useEffect(() => {

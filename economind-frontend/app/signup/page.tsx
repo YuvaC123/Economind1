@@ -25,14 +25,15 @@ export default function SignupPage() {
     setError(null)
     setIsSubmitting(true)
 
+    // >>> START: FIX SIGNUP NAVIGATION (REPLACED router.replace WITH window.location.href) <<<
     try {
       await signup(name, email, password)
-      router.replace('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
-    } finally {
       setIsSubmitting(false)
     }
+    // <<< END: FIX SIGNUP NAVIGATION >>>
   }
 
   return (

@@ -51,7 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (storedToken && storedUser && !isExpired) {
       setToken(storedToken)
-      setUser(JSON.parse(storedUser))
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch {
+        clear()
+      }
     } else {
       clear()
     }
@@ -64,7 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('em_token', newToken)
     localStorage.setItem('em_user', JSON.stringify(newUser))
     localStorage.setItem('em_login_at', String(Date.now()))
-    document.cookie = `em_token=${newToken}; path=/; max-age=${60 * 60 * 48}; SameSite=Lax`
+    const secureFlag = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = `em_token=${newToken}; path=/; max-age=${60 * 60 * 48}; SameSite=Lax${secureFlag}`
     setToken(newToken)
     setUser(newUser)
   }
@@ -73,7 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('em_token')
     localStorage.removeItem('em_user')
     localStorage.removeItem('em_login_at')
-    document.cookie = 'em_token=; path=/; max-age=0'
+    const secureFlag = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = `em_token=; path=/; max-age=0; SameSite=Lax${secureFlag}`
     setToken(null)
     setUser(null)
   }
@@ -83,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await fetch(`${API_URL}/signin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
     })
 
     const data = await res.json()
@@ -144,15 +150,14 @@ export function useAuth() {
   return ctx
 }
 
-import { useRouter } from 'next/navigation'
-
+// >>> START: FIX REDIRECT HOOK (REPLACED router.replace WITH window.location.href) <<<
 export function useRedirectIfAuthenticated(destination = '/dashboard') {
   const { user, isLoading } = useAuth()
-  const router = useRouter()
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.replace(destination)
+      window.location.href = destination
     }
-  }, [isLoading, user, destination, router])
+  }, [isLoading, user, destination])
 }
+// <<< END: FIX REDIRECT HOOK >>>

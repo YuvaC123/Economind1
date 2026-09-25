@@ -21,14 +21,15 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setIsSubmitting(true)
+    // >>> START: FIX LOGIN NAVIGATION (REPLACED router.replace WITH window.location.href) <<<
     try {
       await signin(email, password)
-      router.replace('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signin failed')
-    } finally {
       setIsSubmitting(false)
     }
+    // <<< END: FIX LOGIN NAVIGATION >>>
   }
 
   return (
