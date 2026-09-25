@@ -16,14 +16,14 @@ export function StatCard({
   changePositive,
 }: StatCardProps) {
   return (
-    <div className="card-glass min-w-0 p-5">
-      <div className="flex items-center gap-1.5 mb-3 min-w-0">
+    <div className="card-glass min-w-0 p-5 flex flex-col">
+      <div className="flex items-center gap-1.5 h-5 mb-3 min-w-0 flex-shrink-0">
         <Icon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-        <p className="text-sm text-muted-foreground truncate" title={label}>
+        <p className="text-sm text-muted-foreground truncate leading-none" title={label}>
           {label}
         </p>
       </div>
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0 mt-auto">
         <p className="text-xl font-mono font-semibold break-words">{value}</p>
         {change && (
           <span
