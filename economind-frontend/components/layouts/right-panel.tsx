@@ -13,7 +13,7 @@ export function RightPanel({ isOpen = true, onToggle }: RightPanelProps) {
   if (!isOpen) return null
 
   return (
-    <aside className="fixed right-0 top-16 bottom-0 z-30 border-l border-border bg-card flex flex-col w-80">
+    <aside className="fixed right-0 top-16 bottom-0 z-30 border-l border-white/10 backdrop-blur-2xl [background:color-mix(in_oklch,white_4%,transparent)] flex flex-col w-80">
       <Tabs defaultValue="insights" className="flex flex-col h-full">
         <div className="flex items-center gap-2 px-5 pt-5 pb-3">
           <TabsList className="grid flex-1 grid-cols-3">
@@ -115,10 +115,12 @@ function InsightItem({
   return (
     <div className="py-4 first:pt-0 last:pb-0">
       <div className="flex items-start gap-3">
-        <Icon className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+        <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Icon className="w-3.5 h-3.5 text-primary" />
+        </div>
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground">{title}</p>
-          <p className="text-sm font-semibold mt-1">{value}</p>
+          <p className="text-base font-mono font-semibold mt-1 text-primary">{value}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{change}</p>
         </div>
       </div>

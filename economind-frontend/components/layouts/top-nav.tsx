@@ -17,7 +17,7 @@ export function TopNav({ sidebarOpen = true }: TopNavProps) {
 
   return (
     <header
-      className="fixed top-0 right-0 z-40 border-b border-border bg-card h-16 transition-[left] duration-200"
+      className="fixed top-0 right-0 z-40 border-b border-white/10 backdrop-blur-2xl [background:color-mix(in_oklch,white_4%,transparent)] h-16 transition-[left] duration-200"
       style={{ left: sidebarOpen ? 280 : 80 }}
     >
       <div className="h-full px-6 flex items-center justify-between">

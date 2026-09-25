@@ -2,14 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { DEFAULT_PERSONA, PREDEFINED_SCENARIOS, Persona } from '@/lib/mock-data'
 import { PersonaConfigCard } from '@/components/dashboard/persona-config-card'
 import { MacroeconomicCard } from '@/components/dashboard/macroeconomic-card'
 import { EditPersonaModal } from '@/components/dashboard/edit-persona-modal'
 import { CountUpNumber } from '@/components/shared/count-up-number'
 import { Button } from '@/components/ui/button'
-import { Play, ChevronDown, Users, Plus, Sparkles } from 'lucide-react'
+import { Play, ChevronDown, Users, Plus, Sparkles, Zap } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+
+const columnMotion = (delay: number) => ({
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.45, delay, ease: 'easeOut' as const },
+})
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 
@@ -151,7 +158,13 @@ export default function DashboardPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || errorData.msg || `Simulation failed (Status ${response.status})`)
+        const detail = errorData.error || errorData.msg || `status ${response.status}`
+        console.error('Simulation request failed:', detail)
+        throw new Error(
+          response.status === 401 || response.status === 403
+            ? 'Your session has expired. Please log in again.'
+            : 'The simulation engine ran into a problem. Please try again in a moment.'
+        )
       }
 
       const result = await response.json()
@@ -206,7 +219,7 @@ export default function DashboardPage() {
     <div className="space-y-10 pt-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
         {/* Left Column - Persona */}
-        <div className="lg:col-span-1 min-w-0 space-y-4">
+        <motion.div {...columnMotion(0)} className="lg:col-span-1 min-w-0 space-y-4">
           {/* Persona Picker Card */}
           <div className="card-glass p-5">
             <div className="mb-3">
@@ -241,12 +254,19 @@ export default function DashboardPage() {
           </div>
 
           <PersonaConfigCard persona={persona} onEdit={() => setIsEditingPersona(true)} />
-        </div>
+        </motion.div>
 
         {/* Center Column - Main Content */}
-        <div className="lg:col-span-1 min-w-0 space-y-8">
-          <div className="card-glass p-8">
-            <h3 className="text-base font-semibold mb-5">Scenario Selection</h3>
+        <motion.div {...columnMotion(0.1)} className="lg:col-span-1 min-w-0 space-y-8">
+          <div className="card-glass p-8 relative overflow-hidden">
+            <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+
+            <div className="relative flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-4 h-4 text-primary" />
+              </div>
+              <h3 className="text-lg font-heading font-medium">Run a simulation</h3>
+            </div>
 
             <div className="relative">
               <select
@@ -272,8 +292,22 @@ export default function DashboardPage() {
               {selectedScenario.description}
             </p>
 
+            <div className="grid grid-cols-3 gap-2 mt-5">
+              {[
+                { label: 'Inflation', value: `${selectedScenario.macro.inflation.toFixed(1)}%` },
+                { label: 'Interest', value: `${selectedScenario.macro.interestRate.toFixed(1)}%` },
+                { label: 'Unemployment', value: `${selectedScenario.macro.unemployment.toFixed(1)}%` },
+              ].map((chip) => (
+                <div key={chip.label} className="rounded-lg border border-white/10 bg-primary/5 px-2 py-2 text-center">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{chip.label}</p>
+                  <p className="text-sm font-mono font-semibold text-primary mt-0.5">{chip.value}</p>
+                </div>
+              ))}
+            </div>
+
             <Button
               className="w-full mt-5 gap-2"
+              size="lg"
               onClick={handleRunSimulation}
               disabled={isSimulating}
             >
@@ -281,7 +315,11 @@ export default function DashboardPage() {
               {isSimulating ? 'Running Simulation...' : 'Run Simulation'}
             </Button>
 
-            {error && <p className="text-sm text-destructive mt-3">{error}</p>}
+            {error && (
+              <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 p-2.5 rounded-lg mt-3 leading-relaxed break-words">
+                {error}
+              </p>
+            )}
           </div>
 
           <div className="card-glass p-8">
@@ -316,12 +354,12 @@ export default function DashboardPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Right Column - Macro Environment */}
-        <div className="lg:col-span-1 min-w-0">
+        <motion.div {...columnMotion(0.2)} className="lg:col-span-1 min-w-0">
           <MacroeconomicCard macro={selectedScenario.macro} readOnly />
-        </div>
+        </motion.div>
       </div>
 
       {/* Recent Simulations */}
