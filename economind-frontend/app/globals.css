@@ -149,15 +149,20 @@
     @apply bg-primary;
   }
 
-  /* Plain, solid surface - a quiet step up from the page background. */
+  /* Solid surface with real shadow depth - elevation instead of a glow. */
   .card-glass {
-    @apply rounded-xl p-7 bg-card border border-border shadow-sm;
+    @apply rounded-2xl p-7 bg-card border border-border;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 20px -6px rgba(0, 0, 0, 0.32);
   }
 
   /* For cards where the whole card is the interactive surface (e.g. a
-     draggable row) - the border brightens slightly on hover, nothing else. */
+     draggable row) - lifts slightly and the shadow deepens on hover. */
   .card-interactive {
-    @apply rounded-xl p-6 bg-card border border-border shadow-sm transition-colors duration-150 hover:border-foreground/20;
+    @apply rounded-2xl p-6 bg-card border border-border transition-all duration-200 hover:border-foreground/20 hover:-translate-y-0.5;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 20px -6px rgba(0, 0, 0, 0.32);
+  }
+  .card-interactive:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.28), 0 16px 32px -8px rgba(0, 0, 0, 0.4);
   }
 
   .text-balance-wrap {

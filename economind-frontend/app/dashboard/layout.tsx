@@ -45,7 +45,7 @@ export default function DashboardLayout({
         <TopNav sidebarOpen={sidebarOpen} />
 
         {/* Main Area */}
-        <main className="flex-1 overflow-y-auto pt-16 pb-6 px-6">
+        <main className="flex-1 overflow-y-auto pt-16 pb-10 px-8">
           <motion.div
             key={pathname}
             initial={{ opacity: 0, y: 6 }}

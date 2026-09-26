@@ -48,7 +48,7 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
       </Link>
 
       {/* Navigation Items */}
-      <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-0.5">
         {navItems.map((item) => {
           const isActive =
             item.href === '/dashboard'
@@ -59,13 +59,13 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
           return (
             <Link key={item.href} href={item.href}>
               <div
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 ${
+                className={`relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-lg text-sm transition-colors duration-150 before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-0.5 before:rounded-full before:transition-opacity before:duration-150 ${
                   isActive
-                    ? 'bg-sidebar-accent text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground'
+                    ? 'text-foreground font-medium before:bg-primary before:opacity-100'
+                    : 'text-muted-foreground hover:text-foreground before:opacity-0'
                 }`}
               >
-                <Icon className="w-4 h-4 flex-shrink-0" />
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} />
                 {isOpen && <span className="whitespace-nowrap">{item.label}</span>}
               </div>
             </Link>
