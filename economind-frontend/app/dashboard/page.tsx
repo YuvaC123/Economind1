@@ -290,21 +290,6 @@ export default function DashboardPage() {
               {selectedScenario.description}
             </p>
 
-            <div className="grid grid-cols-3 gap-2 mt-5">
-              {[
-                { label: 'Inflation', value: `${selectedScenario.macro.inflation.toFixed(1)}%` },
-                { label: 'Interest', value: `${selectedScenario.macro.interestRate.toFixed(1)}%` },
-                { label: 'Unemployed', value: `${selectedScenario.macro.unemployment.toFixed(1)}%` },
-              ].map((chip) => (
-                <div key={chip.label} className="rounded-lg border border-border bg-muted/50 px-2 py-2 text-center min-w-0">
-                  <p className="text-[10px] uppercase text-muted-foreground truncate" title={chip.label}>
-                    {chip.label}
-                  </p>
-                  <p className="text-sm font-mono font-semibold text-primary mt-0.5">{chip.value}</p>
-                </div>
-              ))}
-            </div>
-
             <Button
               className="w-full mt-5 gap-2"
               size="lg"
