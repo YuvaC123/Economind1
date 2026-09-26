@@ -29,43 +29,40 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background p-4 gap-4 overflow-hidden">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={setSidebarOpen} />
 
-      {/* Main Content */}
-      <div
-        className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
-        style={{
-          marginLeft: sidebarOpen ? '280px' : '80px',
-          marginRight: rightPanelOpen ? '352px' : '0px',
-        }}
-      >
+      {/* Main Column */}
+      <div className="flex-1 flex flex-col gap-4 min-w-0">
         {/* Top Nav */}
-        <TopNav sidebarOpen={sidebarOpen} />
+        <TopNav />
 
-        {/* Main Area */}
-        <main className="flex-1 overflow-y-auto pt-16 pb-10 px-8">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-          >
-            {children}
-          </motion.div>
-        </main>
+        {/* Content row - main canvas + optional right panel, side by side */}
+        <div className="flex-1 flex gap-4 min-h-0">
+          <main className="flex-1 overflow-y-auto min-w-0 pb-2 px-1">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              {children}
+            </motion.div>
+          </main>
+
+          {rightPanelOpen && (
+            <RightPanel isOpen={rightPanelOpen} onToggle={() => setRightPanelOpen(false)} />
+          )}
+        </div>
       </div>
-
-      {/* Right Panel */}
-      <RightPanel isOpen={rightPanelOpen} onToggle={() => setRightPanelOpen(false)} />
 
       {/* Reopen button - only shown when the panel is closed, since the panel
           has its own inline collapse control when open */}
       {!rightPanelOpen && (
         <button
           onClick={() => setRightPanelOpen(true)}
-          className="fixed right-0 top-20 z-40 bg-card p-2 hover:bg-muted transition-colors border border-border rounded-l-lg hover-glow"
+          className="fixed right-4 top-20 z-40 bg-card p-2 hover:bg-muted transition-colors border border-border rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.24),0_8px_20px_-6px_rgba(0,0,0,0.32)] hover-glow"
           title="Open insights"
         >
           <svg

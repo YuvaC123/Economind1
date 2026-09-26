@@ -13,7 +13,7 @@ export function RightPanel({ isOpen = true, onToggle }: RightPanelProps) {
   if (!isOpen) return null
 
   return (
-    <aside className="fixed right-0 top-16 bottom-0 z-30 border-l border-border bg-sidebar flex flex-col w-80">
+    <aside className="h-full flex-shrink-0 rounded-2xl border border-border bg-sidebar shadow-[0_1px_2px_rgba(0,0,0,0.24),0_8px_20px_-6px_rgba(0,0,0,0.32)] flex flex-col w-80">
       <Tabs defaultValue="insights" className="flex flex-col h-full">
         <div className="flex items-center gap-2 px-5 pt-5 pb-3">
           <TabsList className="grid flex-1 grid-cols-3">

@@ -33,8 +33,8 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 h-screen flex flex-col border-r border-border bg-sidebar transition-[width] duration-200"
-      style={{ width: isOpen ? 280 : 80 }}
+      className="relative h-full flex-shrink-0 flex flex-col rounded-2xl border border-border bg-sidebar shadow-[0_1px_2px_rgba(0,0,0,0.24),0_8px_20px_-6px_rgba(0,0,0,0.32)] transition-[width] duration-200"
+      style={{ width: isOpen ? 264 : 76 }}
     >
       {/* Logo Section */}
       <Link

@@ -8,18 +8,11 @@ import { NotificationsButton } from '@/components/layouts/notifications-button'
 import { ExportButton } from '@/components/layouts/export-button'
 import { SettingsMenu } from '@/components/layouts/settings-menu'
 
-interface TopNavProps {
-  sidebarOpen?: boolean
-}
-
-export function TopNav({ sidebarOpen = true }: TopNavProps) {
+export function TopNav() {
   const router = useRouter()
 
   return (
-    <header
-      className="fixed top-0 right-0 z-40 border-b border-border bg-background h-16 transition-[left] duration-200"
-      style={{ left: sidebarOpen ? 280 : 80 }}
-    >
+    <header className="flex-shrink-0 rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.24),0_8px_20px_-6px_rgba(0,0,0,0.32)] h-16">
       <div className="h-full px-6 flex items-center justify-between">
         {/* Left Side */}
         <div className="flex items-center gap-3">
