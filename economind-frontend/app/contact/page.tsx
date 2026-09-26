@@ -18,7 +18,7 @@ export default function ContactPage() {
 
         <a
           href="mailto:yuva.chood@gmail.com"
-          className="rounded-xl border border-border p-6 flex items-start gap-4 transition-all duration-200 hover:shadow-[0_0_0_1px_var(--color-primary),0_8px_24px_-8px_var(--color-primary)] hover:border-primary/40 hover:-translate-y-0.5 hover-glow group"
+          className="rounded-xl border border-border bg-card p-6 flex items-start gap-4 hover-glow group"
         >
           <Mail className="w-6 h-6 text-primary mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
