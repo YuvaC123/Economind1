@@ -24,7 +24,7 @@ export function StatCard({
         </p>
       </div>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0 mt-auto">
-        <p className="text-xl font-mono font-semibold break-words">{value}</p>
+        <p className="text-3xl font-mono font-semibold tracking-tight break-words">{value}</p>
         {change && (
           <span
             className={`text-xs font-medium ${

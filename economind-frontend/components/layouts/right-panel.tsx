@@ -120,7 +120,7 @@ function InsightItem({
         </div>
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground">{title}</p>
-          <p className="text-base font-mono font-semibold mt-1 text-primary">{value}</p>
+          <p className="text-2xl font-mono font-semibold tracking-tight mt-1 text-primary">{value}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{change}</p>
         </div>
       </div>

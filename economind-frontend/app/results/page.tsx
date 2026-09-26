@@ -164,11 +164,11 @@ function ResultsContent() {
                 key={i}
                 className="card-glass"
               >
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground truncate" title={item.label}>
                   {item.label}
                 </p>
 
-                <p className="text-2xl font-mono font-semibold text-primary mt-2">
+                <p className="text-4xl font-mono font-semibold tracking-tight text-primary mt-2">
                   {item.value}
                 </p>
 
@@ -236,13 +236,20 @@ function ResultsContent() {
                   {Object.entries(
                     result.behavioralTraits
                   ).map(([key, value]) => {
-                    const numericValue = Number(value)
+                    const parsed = Number(value)
+                    const numericValue = Number.isFinite(parsed)
+                      ? Math.min(100, Math.max(0, parsed))
+                      : 0
 
                     return (
                       <div key={key}>
                         <div className="flex justify-between mb-2">
                           <span className="text-sm font-medium capitalize">
                             {key
+                              .replace(
+                                /[_-]/g,
+                                ' '
+                              )
                               .replace(
                                 /([A-Z])/g,
                                 ' $1'
@@ -287,13 +294,20 @@ function ResultsContent() {
                   {Object.entries(
                     result.theoryAlignment
                   ).map(([key, value]) => {
-                    const numericValue = Number(value)
+                    const parsed = Number(value)
+                    const numericValue = Number.isFinite(parsed)
+                      ? Math.min(100, Math.max(0, parsed))
+                      : 0
 
                     return (
                       <div key={key}>
                         <div className="flex justify-between mb-2">
                           <span className="text-sm font-medium capitalize">
                             {key
+                              .replace(
+                                /[_-]/g,
+                                ' '
+                              )
                               .replace(
                                 /([A-Z])/g,
                                 ' $1'
