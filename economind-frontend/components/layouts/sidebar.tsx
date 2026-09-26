@@ -33,19 +33,17 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 h-screen flex flex-col border-r border-white/10 backdrop-blur-2xl [background:color-mix(in_oklch,white_4%,transparent)] transition-[width] duration-200"
+      className="fixed left-0 top-0 z-40 h-screen flex flex-col border-r border-border bg-sidebar transition-[width] duration-200"
       style={{ width: isOpen ? 280 : 80 }}
     >
       {/* Logo Section */}
       <Link
         href="/"
-        className="h-16 flex items-center gap-3 px-4 border-b border-white/10 cursor-pointer hover:bg-white/5 transition-colors duration-150"
+        className="h-16 flex items-center gap-3 px-4 border-b border-border cursor-pointer hover:bg-muted transition-colors duration-150"
       >
         <Brain className="w-5 h-5 flex-shrink-0 text-primary" />
         {isOpen && (
-          <span className="font-heading font-medium text-base whitespace-nowrap bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
-            EconoMind
-          </span>
+          <span className="font-heading font-medium text-base whitespace-nowrap">EconoMind</span>
         )}
       </Link>
 
@@ -61,10 +59,10 @@ export function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
           return (
             <Link key={item.href} href={item.href}>
               <div
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 ${
                   isActive
-                    ? 'bg-gradient-to-r from-primary/25 to-primary/5 text-primary font-medium shadow-[0_0_20px_-6px_var(--color-primary)] border border-primary/30'
-                    : 'text-muted-foreground border border-transparent hover:bg-white/5 hover:text-foreground hover:translate-x-0.5'
+                    ? 'bg-sidebar-accent text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground'
                 }`}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />

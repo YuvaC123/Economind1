@@ -258,11 +258,9 @@ export default function DashboardPage() {
 
         {/* Center Column - Main Content */}
         <motion.div {...columnMotion(0.1)} className="lg:col-span-1 min-w-0 space-y-8">
-          <div className="card-glass p-8 relative overflow-hidden">
-            <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
-
-            <div className="relative flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center flex-shrink-0">
+          <div className="card-glass p-8">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
                 <Zap className="w-4 h-4 text-primary" />
               </div>
               <h3 className="text-lg font-heading font-medium">Run a simulation</h3>
@@ -298,7 +296,7 @@ export default function DashboardPage() {
                 { label: 'Interest', value: `${selectedScenario.macro.interestRate.toFixed(1)}%` },
                 { label: 'Unemployment', value: `${selectedScenario.macro.unemployment.toFixed(1)}%` },
               ].map((chip) => (
-                <div key={chip.label} className="rounded-lg border border-white/10 bg-primary/5 px-2 py-2 text-center">
+                <div key={chip.label} className="rounded-lg border border-border bg-muted/50 px-2 py-2 text-center">
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{chip.label}</p>
                   <p className="text-sm font-mono font-semibold text-primary mt-0.5">{chip.value}</p>
                 </div>
