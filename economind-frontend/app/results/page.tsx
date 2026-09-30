@@ -8,6 +8,14 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageTransition } from '@/components/shared/page-transition'
 
+// The LLM's JSON response isn't strictly typed - a field can come back as a
+// string, be missing, or be out of range. Never trust it enough to call
+// .toFixed() directly; always coerce through here first.
+function safeNumber(value: unknown, fallback = 0): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
 function ResultsContent() {
   const router = useRouter()
 
@@ -133,31 +141,23 @@ function ResultsContent() {
             {[
               {
                 label: 'Monthly Spending',
-                value: `$${result.decisions.spending.toFixed(0)}`,
-                confidence: `${(
-                  result.confidence.spending * 100
-                ).toFixed(0)}%`,
+                value: `$${safeNumber(result.decisions?.spending).toFixed(0)}`,
+                confidence: `${(safeNumber(result.confidence?.spending, 0.75) * 100).toFixed(0)}%`,
               },
               {
                 label: 'Savings',
-                value: `$${result.decisions.saving.toFixed(0)}`,
-                confidence: `${(
-                  result.confidence.saving * 100
-                ).toFixed(0)}%`,
+                value: `$${safeNumber(result.decisions?.saving).toFixed(0)}`,
+                confidence: `${(safeNumber(result.confidence?.saving, 0.75) * 100).toFixed(0)}%`,
               },
               {
                 label: 'Borrowing',
-                value: `$${result.decisions.borrowing.toFixed(0)}`,
-                confidence: `${(
-                  result.confidence.borrowing * 100
-                ).toFixed(0)}%`,
+                value: `$${safeNumber(result.decisions?.borrowing).toFixed(0)}`,
+                confidence: `${(safeNumber(result.confidence?.borrowing, 0.75) * 100).toFixed(0)}%`,
               },
               {
                 label: 'Investing',
-                value: `$${result.decisions.investing.toFixed(0)}`,
-                confidence: `${(
-                  result.confidence.investing * 100
-                ).toFixed(0)}%`,
+                value: `$${safeNumber(result.decisions?.investing).toFixed(0)}`,
+                confidence: `${(safeNumber(result.confidence?.investing, 0.75) * 100).toFixed(0)}%`,
               },
             ].map((item, i) => (
               <div
