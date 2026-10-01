@@ -86,37 +86,37 @@
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.16 0.008 280);
-  --foreground: oklch(0.92 0.006 280);
-  --card: oklch(0.195 0.01 280);
-  --card-foreground: oklch(0.92 0.006 280);
-  --popover: oklch(0.205 0.011 280);
-  --popover-foreground: oklch(0.92 0.006 280);
-  --primary: oklch(0.62 0.13 288);
+  --background: oklch(0.145 0.018 285);
+  --foreground: oklch(0.9 0.01 280);
+  --card: oklch(0.2 0.03 285);
+  --card-foreground: oklch(0.9 0.01 280);
+  --popover: oklch(0.19 0.032 285);
+  --popover-foreground: oklch(0.9 0.01 280);
+  --primary: oklch(0.66 0.19 293);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.24 0.01 280);
-  --secondary-foreground: oklch(0.92 0.006 280);
-  --muted: oklch(0.22 0.009 280);
-  --muted-foreground: oklch(0.62 0.014 280);
-  --accent: oklch(0.26 0.025 288);
-  --accent-foreground: oklch(0.8 0.05 288);
+  --secondary: oklch(0.25 0.028 285);
+  --secondary-foreground: oklch(0.9 0.01 280);
+  --muted: oklch(0.23 0.025 285);
+  --muted-foreground: oklch(0.65 0.02 280);
+  --accent: oklch(0.28 0.05 293);
+  --accent-foreground: oklch(0.85 0.09 293);
   --destructive: oklch(0.7 0.19 22.216);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.62 0.13 288);
-  --chart-1: oklch(0.62 0.13 288);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.66 0.19 293);
+  --chart-1: oklch(0.66 0.19 293);
   --chart-2: oklch(0.6 0.1 160);
   --chart-3: oklch(0.68 0.15 48);
   --chart-4: oklch(0.7 0.14 90);
   --chart-5: oklch(0.6 0.15 20);
-  --sidebar: oklch(0.175 0.009 280);
-  --sidebar-foreground: oklch(0.92 0.006 280);
-  --sidebar-primary: oklch(0.62 0.13 288);
+  --sidebar: oklch(0.16 0.038 285);
+  --sidebar-foreground: oklch(0.9 0.01 280);
+  --sidebar-primary: oklch(0.66 0.19 293);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.24 0.01 280);
-  --sidebar-accent-foreground: oklch(0.92 0.006 280);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.62 0.13 288);
+  --sidebar-accent: oklch(0.25 0.028 285);
+  --sidebar-accent-foreground: oklch(0.9 0.01 280);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.66 0.19 293);
 }
 
 @layer base {
@@ -124,7 +124,13 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background:
+      radial-gradient(70% 55% at 12% 0%, oklch(0.66 0.19 293 / 22%), transparent 60%),
+      radial-gradient(55% 50% at 100% 15%, oklch(0.72 0.15 55 / 14%), transparent 55%),
+      radial-gradient(75% 65% at 50% 115%, oklch(0.7 0.13 175 / 10%), transparent 60%),
+      var(--background);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans scroll-smooth;
@@ -149,20 +155,21 @@
     @apply bg-primary;
   }
 
-  /* Solid surface with real shadow depth - elevation instead of a glow. */
+  /* Frosted glass surface - translucent over the gradient-mesh background. */
   .card-glass {
-    @apply rounded-2xl p-7 bg-card border border-border;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 20px -6px rgba(0, 0, 0, 0.32);
+    @apply rounded-2xl p-7 border border-white/10 shadow-sm;
+    background: color-mix(in oklch, white 5%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   /* For cards where the whole card is the interactive surface (e.g. a
-     draggable row) - lifts slightly and the shadow deepens on hover. */
+     draggable row) - glass + a soft violet glow and lift on hover. */
   .card-interactive {
-    @apply rounded-2xl p-6 bg-card border border-border transition-all duration-200 hover:border-foreground/20 hover:-translate-y-0.5;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 20px -6px rgba(0, 0, 0, 0.32);
-  }
-  .card-interactive:hover {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.28), 0 16px 32px -8px rgba(0, 0, 0, 0.4);
+    @apply rounded-2xl p-6 border border-white/10 shadow-sm transition-all duration-200 hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-8px_var(--color-primary)];
+    background: color-mix(in oklch, white 5%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .text-balance-wrap {
@@ -176,9 +183,9 @@
     animation: dot-drift 60s linear infinite;
   }
 
-  /* Quiet hover affordance - a border shift only, no color or motion */
+  /* Soft violet glow + lift on hover - the Depth direction's signature affordance */
   .hover-glow {
-    @apply transition-colors duration-150 hover:border-foreground/20;
+    @apply transition-all duration-200 hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-8px_var(--color-primary)];
   }
 }
 

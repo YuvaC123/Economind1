@@ -12,7 +12,7 @@ export function TopNav() {
   const router = useRouter()
 
   return (
-    <header className="flex-shrink-0 rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.24),0_8px_20px_-6px_rgba(0,0,0,0.32)] h-16">
+    <header className="flex-shrink-0 rounded-2xl border border-white/10 backdrop-blur-2xl [background:color-mix(in_oklch,white_4%,transparent)] shadow-sm h-16">
       <div className="h-full px-6 flex items-center justify-between">
         {/* Left Side */}
         <div className="flex items-center gap-3">
