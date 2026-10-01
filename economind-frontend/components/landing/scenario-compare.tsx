@@ -85,8 +85,11 @@ export function ScenarioCompare() {
 
         {/* Divider line - stays crisp within the rounded card */}
         <div
-          className="absolute top-0 bottom-0 w-px bg-primary pointer-events-none"
-          style={{ left: `${percent}%` }}
+          className="absolute top-0 bottom-0 w-px bg-primary pointer-events-none transition-[box-shadow] duration-150"
+          style={{
+            left: `${percent}%`,
+            boxShadow: isDragging ? '0 0 16px 1px var(--color-primary)' : 'none',
+          }}
         />
 
         <div className="relative px-6 sm:px-12 pt-6 sm:pt-8 pb-10 sm:pb-14">
@@ -136,9 +139,15 @@ export function ScenarioCompare() {
           e.stopPropagation()
           setIsDragging(true)
         }}
-        animate={{ scale: isDragging ? 1.15 : 1 }}
-        whileHover={{ scale: 1.08 }}
-        className="absolute top-4 sm:top-5 -translate-x-1/2 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md cursor-ew-resize z-10"
+        animate={{
+          scale: isDragging ? 1.22 : 1,
+          boxShadow: isDragging
+            ? '0 0 0 10px var(--color-primary)/20, 0 8px 24px rgba(0,0,0,0.5)'
+            : '0 2px 8px rgba(0,0,0,0.4)',
+        }}
+        whileHover={{ scale: 1.1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+        className="absolute top-4 sm:top-5 -translate-x-1/2 w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-ew-resize z-10 touch-none"
         style={{ left: `${percent}%` }}
       >
         <ChevronsLeftRight className="w-4 h-4" />
