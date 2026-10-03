@@ -18,7 +18,7 @@ interface EditPersonaModalProps {
 }
 
 const fieldClass =
-  'mt-1 w-full px-3 py-2 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30'
+  'mt-1.5 w-full px-3.5 py-2.5 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30'
 
 export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalProps) {
   const [form, setForm] = useState<Persona | null>(persona)
@@ -94,25 +94,25 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
         onClick={onClose}
       />
 
-      <div className="relative bg-card rounded-xl border border-border shadow-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-card rounded-xl border border-border shadow-lg w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground cursor-pointer transition-colors hover-glow"
+          className="absolute top-5 right-5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors hover-glow"
           aria-label="Close"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <h3 className="font-semibold mb-1">Edit persona</h3>
-        <p className="text-sm text-muted-foreground mb-6">Update demographic and financial details</p>
+        <h3 className="font-semibold text-lg mb-1.5">Edit persona</h3>
+        <p className="text-sm text-muted-foreground mb-7">Update demographic and financial details</p>
 
         {validationError && (
-          <div className="mb-4 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium">
+          <div className="mb-5 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium">
             {validationError}
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
             <label className="text-sm font-medium">Name</label>
             <input
@@ -125,7 +125,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Age</label>
               <input
@@ -176,9 +176,9 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
               max={INCOME_SLIDER_MAX}
               step={INCOME_SLIDER_STEP}
             />
-            <div className="flex items-center justify-between mt-1 gap-2">
+            <div className="flex items-center justify-between mt-2 gap-3">
               <span className="text-xs text-muted-foreground flex-shrink-0">$0</span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <input
                   type="number"
                   required
@@ -186,10 +186,10 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                   max={100000000}
                   value={form.incomeMin}
                   onChange={(e) => update('incomeMin', Number(e.target.value))}
-                  className="w-24 px-2 py-1 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-28 px-2.5 py-1.5 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
                   title="Exact minimum — the slider caps at $500K, type any amount here"
                 />
-                <span className="text-xs text-muted-foreground">to</span>
+                <span className="text-xs text-muted-foreground flex-shrink-0">to</span>
                 <input
                   type="number"
                   required
@@ -197,7 +197,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                   max={100000000}
                   value={form.incomeMax}
                   onChange={(e) => update('incomeMax', Number(e.target.value))}
-                  className="w-24 px-2 py-1 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-28 px-2.5 py-1.5 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
                   title="Exact maximum — the slider caps at $500K, type any amount here"
                 />
               </div>
@@ -205,7 +205,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Wealth ($)</label>
               <input
@@ -232,7 +232,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Debt ($)</label>
               <input
