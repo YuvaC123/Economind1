@@ -28,6 +28,8 @@ model Persona{
   gender String?
   education String?
   income Float
+  income_min Float?
+  income_max Float?
   savings Float
   monthly_expenses Float
   wealth Float

@@ -4,7 +4,8 @@ export interface Persona {
   age: number
   gender: 'male' | 'female' | 'other'
   education: 'high-school' | 'bachelors' | 'masters' | 'phd'
-  income: number
+  incomeMin: number
+  incomeMax: number
   wealth: number
   savings: number
   debt: number
@@ -73,7 +74,8 @@ export const DEFAULT_PERSONA: Persona = {
   age: 35,
   gender: 'male',
   education: 'masters',
-  income: 85000,
+  incomeMin: 75000,
+  incomeMax: 95000,
   wealth: 250000,
   savings: 45000,
   debt: 15000,

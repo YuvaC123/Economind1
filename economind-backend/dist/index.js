@@ -50,12 +50,13 @@ const SigninSchema = z.object({
     password: z.string().min(1, 'Password is required').max(64, 'Password must not exceed 64 characters'),
 });
 // <<< END: DIRECT SIGNUP SCHEMA >>>
-const PersonaSchema = z.object({
+const PersonaBaseSchema = z.object({
     name: z.string().trim().min(1, 'Persona name is required').max(50, 'Persona name must not exceed 50 characters'),
     age: z.number().int('Age must be a whole number').min(1, 'Age must be at least 1').max(120, 'Age cannot exceed 120'),
     gender: z.string().trim().max(30).optional().nullable(),
     education: z.string().trim().max(50).optional().nullable(),
-    income: z.number().min(0, 'Income cannot be negative').max(100_000_000, 'Income exceeds maximum limit ($100M)'),
+    income_min: z.number().min(0, 'Income cannot be negative').max(100_000_000, 'Income exceeds maximum limit ($100M)'),
+    income_max: z.number().min(0, 'Income cannot be negative').max(100_000_000, 'Income exceeds maximum limit ($100M)'),
     savings: z.number().min(0, 'Savings cannot be negative').max(100_000_000, 'Savings exceeds maximum limit ($100M)'),
     monthly_expenses: z.number().min(0, 'Monthly expenses cannot be negative').max(10_000_000, 'Monthly expenses exceeds limit ($10M)'),
     wealth: z.number().min(-10_000_000, 'Wealth is below minimum limit').max(1_000_000_000, 'Wealth exceeds limit ($1B)'),
@@ -65,6 +66,12 @@ const PersonaSchema = z.object({
     saving_preference: z.string().trim().max(30).optional().nullable(),
     investment_preference: z.string().trim().max(30).optional().nullable(),
 });
+const incomeRangeRefine = (data) => data.income_min === undefined || data.income_max === undefined || data.income_max >= data.income_min;
+const incomeRangeIssue = {
+    message: 'Income max must be greater than or equal to income min',
+    path: ['income_max'],
+};
+const PersonaSchema = PersonaBaseSchema.refine(incomeRangeRefine, incomeRangeIssue);
 const ScenarioSchema = z.object({
     scenario_name: z.string().min(1),
     inflation_rate: z.number(),
@@ -196,13 +203,17 @@ app.post('/simulate', authMiddleware, async (req, res) => {
         return res.status(400).json({ msg: 'persona and scenario are required' });
     }
     const { persona, scenario, persona_name = 'Unknown', scenario_name = 'Custom' } = parsed.data;
-    // The persona's income is annual ($/yr). Every decision is a monthly dollar
-    // amount, so derive and hand the LLM the monthly figure explicitly instead
-    // of making it guess at a conversion — this is what the budget identity
-    // below (and the post-hoc rescale) is anchored to.
-    const annualIncome = typeof persona['income'] === 'number' ? persona['income'] : null;
+    // Income is a range ($/yr) now, not one number. The budget identity below
+    // (and the post-hoc rescale) needs a single anchor, so we use the
+    // midpoint — but the LLM gets the full range too, for richer reasoning
+    // about uncertainty ("could be anywhere from $X to $Y").
+    const incomeMin = typeof persona['income_min'] === 'number' ? persona['income_min'] : null;
+    const incomeMax = typeof persona['income_max'] === 'number' ? persona['income_max'] : null;
+    const annualIncome = incomeMin !== null && incomeMax !== null ? (incomeMin + incomeMax) / 2 : null;
     const monthlyIncome = annualIncome !== null ? annualIncome / 12 : null;
-    const personaForPrompt = monthlyIncome !== null ? { ...persona, monthly_income: Math.round(monthlyIncome * 100) / 100 } : persona;
+    const personaForPrompt = monthlyIncome !== null
+        ? { ...persona, monthly_income: Math.round(monthlyIncome * 100) / 100, monthly_income_range: [Math.round(incomeMin / 12), Math.round(incomeMax / 12)] }
+        : persona;
     const userPrompt = `Simulate this consumer persona under this macroeconomic scenario.
 Return ONLY valid JSON. Every string must use double quotes.
 
@@ -311,7 +322,7 @@ ${JSON.stringify(scenario, null, 2)}`;
         // monthlyIncome/annualIncome are returned for display only (e.g. "these
         // figures are monthly, based on a $X/yr income") — not persisted, since
         // the Simulation table has no column for them.
-        return res.status(200).json({ ...normalized, monthlyIncome, annualIncome });
+        return res.status(200).json({ ...normalized, monthlyIncome, annualIncome, annualIncomeMin: incomeMin, annualIncomeMax: incomeMax });
     }
     catch (error) {
         console.error('[SIMULATE ROUTE ERROR]:', error);
@@ -374,8 +385,11 @@ app.post('/new-persona', authMiddleware, async (req, res) => {
         return res.status(400).json({ msg: 'Validation failed', errors: parsed.error.issues });
     }
     try {
+        // "income" stays populated as the midpoint for any legacy consumer of the
+        // single-number field; income_min/income_max are the source of truth now.
+        const income = (parsed.data.income_min + parsed.data.income_max) / 2;
         const persona = await prisma.persona.create({
-            data: { ...parsed.data, user_id: req.userId },
+            data: { ...parsed.data, income, user_id: req.userId },
         });
         return res.status(200).json({ msg: 'Persona creation successful.', persona });
     }
@@ -384,7 +398,7 @@ app.post('/new-persona', authMiddleware, async (req, res) => {
     }
 });
 app.patch('/personas/:id', authMiddleware, async (req, res) => {
-    const parsed = PersonaSchema.partial().safeParse(req.body);
+    const parsed = PersonaBaseSchema.partial().refine(incomeRangeRefine, incomeRangeIssue).safeParse(req.body);
     if (!parsed.success) {
         return res.status(400).json({ msg: 'Validation failed', errors: parsed.error.issues });
     }
@@ -394,9 +408,13 @@ app.patch('/personas/:id', authMiddleware, async (req, res) => {
         if (!existing || existing.user_id !== req.userId) {
             return res.status(404).json({ msg: 'Persona not found' });
         }
+        const { income_min, income_max } = parsed.data;
+        const incomeUpdate = income_min !== undefined && income_max !== undefined
+            ? { income: (income_min + income_max) / 2 }
+            : {};
         const persona = await prisma.persona.update({
             where: { id: personaId },
-            data: parsed.data,
+            data: { ...parsed.data, ...incomeUpdate },
         });
         return res.status(200).json({ msg: 'Persona updated', persona });
     }

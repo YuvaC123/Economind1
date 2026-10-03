@@ -671,6 +671,8 @@ export declare const PersonaScalarFieldEnum: {
     readonly gender: 'gender';
     readonly education: 'education';
     readonly income: 'income';
+    readonly income_min: 'income_min';
+    readonly income_max: 'income_max';
     readonly savings: 'savings';
     readonly monthly_expenses: 'monthly_expenses';
     readonly wealth: 'wealth';

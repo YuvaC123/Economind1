@@ -136,10 +136,11 @@ function ResultsContent() {
 
               {Number.isFinite(result.monthlyIncome) && (
                 <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border font-mono">
-                  Based on ${Math.round(safeNumber(result.annualIncome)).toLocaleString()}/yr income
-                  {' '}(${Math.round(safeNumber(result.monthlyIncome)).toLocaleString()}/mo) — every dollar figure
-                  below is a <span className="font-semibold">monthly</span> amount, and spending + saving +
-                  investing is balanced to equal monthly income + borrowing.
+                  Based on a ${Math.round(safeNumber(result.annualIncomeMin)).toLocaleString()}–$
+                  {Math.round(safeNumber(result.annualIncomeMax)).toLocaleString()}/yr income range
+                  {' '}(~${Math.round(safeNumber(result.monthlyIncome)).toLocaleString()}/mo at the midpoint) —
+                  every dollar figure below is a <span className="font-semibold">monthly</span> amount, and
+                  spending + saving + investing is balanced to equal monthly income + borrowing.
                 </p>
               )}
             </CardContent>

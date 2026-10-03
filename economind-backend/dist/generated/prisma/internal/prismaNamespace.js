@@ -96,6 +96,8 @@ export const PersonaScalarFieldEnum = {
     gender: 'gender',
     education: 'education',
     income: 'income',
+    income_min: 'income_min',
+    income_max: 'income_max',
     savings: 'savings',
     monthly_expenses: 'monthly_expenses',
     wealth: 'wealth',

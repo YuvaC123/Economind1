@@ -26,7 +26,11 @@ interface ApiPersona {
   age: number
   gender?: string | null
   education?: string | null
+  // income_min/max are nullable — personas created before the income-range
+  // feature shipped only have the legacy single "income" value in the DB.
   income: number
+  income_min: number | null
+  income_max: number | null
   wealth: number
   savings: number
   debt: number
@@ -44,7 +48,8 @@ function fromApiPersona(p: ApiPersona): Persona {
     age: p.age,
     gender: (p.gender as Persona['gender']) ?? 'other',
     education: (p.education as Persona['education']) ?? 'bachelors',
-    income: p.income,
+    incomeMin: p.income_min ?? p.income,
+    incomeMax: p.income_max ?? p.income,
     wealth: p.wealth,
     savings: p.savings,
     debt: p.debt,
@@ -133,7 +138,8 @@ export default function DashboardPage() {
           persona: {
             name: persona.name,
             age: persona.age,
-            income: persona.income,
+            income_min: persona.incomeMin,
+            income_max: persona.incomeMax,
             savings: persona.savings,
             wealth: persona.wealth,
             debt: persona.debt,
@@ -244,7 +250,7 @@ export default function DashboardPage() {
               >
                 {userPersonas.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} — ${(p.income / 1000).toFixed(0)}K/yr
+                    {p.name} — ~${((p.incomeMin + p.incomeMax) / 2 / 1000).toFixed(0)}K/yr
                   </option>
                 ))}
                 <option value="default">Default: John Doe (Standard)</option>

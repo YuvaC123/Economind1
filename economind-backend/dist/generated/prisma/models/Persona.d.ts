@@ -15,6 +15,8 @@ export type AggregatePersona = {
 export type PersonaAvgAggregateOutputType = {
     age: number | null;
     income: number | null;
+    income_min: number | null;
+    income_max: number | null;
     savings: number | null;
     monthly_expenses: number | null;
     wealth: number | null;
@@ -23,6 +25,8 @@ export type PersonaAvgAggregateOutputType = {
 export type PersonaSumAggregateOutputType = {
     age: number | null;
     income: number | null;
+    income_min: number | null;
+    income_max: number | null;
     savings: number | null;
     monthly_expenses: number | null;
     wealth: number | null;
@@ -35,6 +39,8 @@ export type PersonaMinAggregateOutputType = {
     gender: string | null;
     education: string | null;
     income: number | null;
+    income_min: number | null;
+    income_max: number | null;
     savings: number | null;
     monthly_expenses: number | null;
     wealth: number | null;
@@ -53,6 +59,8 @@ export type PersonaMaxAggregateOutputType = {
     gender: string | null;
     education: string | null;
     income: number | null;
+    income_min: number | null;
+    income_max: number | null;
     savings: number | null;
     monthly_expenses: number | null;
     wealth: number | null;
@@ -71,6 +79,8 @@ export type PersonaCountAggregateOutputType = {
     gender: number;
     education: number;
     income: number;
+    income_min: number;
+    income_max: number;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -86,6 +96,8 @@ export type PersonaCountAggregateOutputType = {
 export type PersonaAvgAggregateInputType = {
     age?: true;
     income?: true;
+    income_min?: true;
+    income_max?: true;
     savings?: true;
     monthly_expenses?: true;
     wealth?: true;
@@ -94,6 +106,8 @@ export type PersonaAvgAggregateInputType = {
 export type PersonaSumAggregateInputType = {
     age?: true;
     income?: true;
+    income_min?: true;
+    income_max?: true;
     savings?: true;
     monthly_expenses?: true;
     wealth?: true;
@@ -106,6 +120,8 @@ export type PersonaMinAggregateInputType = {
     gender?: true;
     education?: true;
     income?: true;
+    income_min?: true;
+    income_max?: true;
     savings?: true;
     monthly_expenses?: true;
     wealth?: true;
@@ -124,6 +140,8 @@ export type PersonaMaxAggregateInputType = {
     gender?: true;
     education?: true;
     income?: true;
+    income_min?: true;
+    income_max?: true;
     savings?: true;
     monthly_expenses?: true;
     wealth?: true;
@@ -142,6 +160,8 @@ export type PersonaCountAggregateInputType = {
     gender?: true;
     education?: true;
     income?: true;
+    income_min?: true;
+    income_max?: true;
     savings?: true;
     monthly_expenses?: true;
     wealth?: true;
@@ -237,6 +257,8 @@ export type PersonaGroupByOutputType = {
     gender: string | null;
     education: string | null;
     income: number;
+    income_min: number | null;
+    income_max: number | null;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -266,6 +288,8 @@ export type PersonaWhereInput = {
     gender?: Prisma.StringNullableFilter<"Persona"> | string | null;
     education?: Prisma.StringNullableFilter<"Persona"> | string | null;
     income?: Prisma.FloatFilter<"Persona"> | number;
+    income_min?: Prisma.FloatNullableFilter<"Persona"> | number | null;
+    income_max?: Prisma.FloatNullableFilter<"Persona"> | number | null;
     savings?: Prisma.FloatFilter<"Persona"> | number;
     monthly_expenses?: Prisma.FloatFilter<"Persona"> | number;
     wealth?: Prisma.FloatFilter<"Persona"> | number;
@@ -285,6 +309,8 @@ export type PersonaOrderByWithRelationInput = {
     gender?: Prisma.SortOrderInput | Prisma.SortOrder;
     education?: Prisma.SortOrderInput | Prisma.SortOrder;
     income?: Prisma.SortOrder;
+    income_min?: Prisma.SortOrderInput | Prisma.SortOrder;
+    income_max?: Prisma.SortOrderInput | Prisma.SortOrder;
     savings?: Prisma.SortOrder;
     monthly_expenses?: Prisma.SortOrder;
     wealth?: Prisma.SortOrder;
@@ -307,6 +333,8 @@ export type PersonaWhereUniqueInput = Prisma.AtLeast<{
     gender?: Prisma.StringNullableFilter<"Persona"> | string | null;
     education?: Prisma.StringNullableFilter<"Persona"> | string | null;
     income?: Prisma.FloatFilter<"Persona"> | number;
+    income_min?: Prisma.FloatNullableFilter<"Persona"> | number | null;
+    income_max?: Prisma.FloatNullableFilter<"Persona"> | number | null;
     savings?: Prisma.FloatFilter<"Persona"> | number;
     monthly_expenses?: Prisma.FloatFilter<"Persona"> | number;
     wealth?: Prisma.FloatFilter<"Persona"> | number;
@@ -326,6 +354,8 @@ export type PersonaOrderByWithAggregationInput = {
     gender?: Prisma.SortOrderInput | Prisma.SortOrder;
     education?: Prisma.SortOrderInput | Prisma.SortOrder;
     income?: Prisma.SortOrder;
+    income_min?: Prisma.SortOrderInput | Prisma.SortOrder;
+    income_max?: Prisma.SortOrderInput | Prisma.SortOrder;
     savings?: Prisma.SortOrder;
     monthly_expenses?: Prisma.SortOrder;
     wealth?: Prisma.SortOrder;
@@ -352,6 +382,8 @@ export type PersonaScalarWhereWithAggregatesInput = {
     gender?: Prisma.StringNullableWithAggregatesFilter<"Persona"> | string | null;
     education?: Prisma.StringNullableWithAggregatesFilter<"Persona"> | string | null;
     income?: Prisma.FloatWithAggregatesFilter<"Persona"> | number;
+    income_min?: Prisma.FloatNullableWithAggregatesFilter<"Persona"> | number | null;
+    income_max?: Prisma.FloatNullableWithAggregatesFilter<"Persona"> | number | null;
     savings?: Prisma.FloatWithAggregatesFilter<"Persona"> | number;
     monthly_expenses?: Prisma.FloatWithAggregatesFilter<"Persona"> | number;
     wealth?: Prisma.FloatWithAggregatesFilter<"Persona"> | number;
@@ -370,6 +402,8 @@ export type PersonaCreateInput = {
     gender?: string | null;
     education?: string | null;
     income: number;
+    income_min?: number | null;
+    income_max?: number | null;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -388,6 +422,8 @@ export type PersonaUncheckedCreateInput = {
     gender?: string | null;
     education?: string | null;
     income: number;
+    income_min?: number | null;
+    income_max?: number | null;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -406,6 +442,8 @@ export type PersonaUpdateInput = {
     gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     income?: Prisma.FloatFieldUpdateOperationsInput | number;
+    income_min?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
+    income_max?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
     savings?: Prisma.FloatFieldUpdateOperationsInput | number;
     monthly_expenses?: Prisma.FloatFieldUpdateOperationsInput | number;
     wealth?: Prisma.FloatFieldUpdateOperationsInput | number;
@@ -424,6 +462,8 @@ export type PersonaUncheckedUpdateInput = {
     gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     income?: Prisma.FloatFieldUpdateOperationsInput | number;
+    income_min?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
+    income_max?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
     savings?: Prisma.FloatFieldUpdateOperationsInput | number;
     monthly_expenses?: Prisma.FloatFieldUpdateOperationsInput | number;
     wealth?: Prisma.FloatFieldUpdateOperationsInput | number;
@@ -442,6 +482,8 @@ export type PersonaCreateManyInput = {
     gender?: string | null;
     education?: string | null;
     income: number;
+    income_min?: number | null;
+    income_max?: number | null;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -460,6 +502,8 @@ export type PersonaUpdateManyMutationInput = {
     gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     income?: Prisma.FloatFieldUpdateOperationsInput | number;
+    income_min?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
+    income_max?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
     savings?: Prisma.FloatFieldUpdateOperationsInput | number;
     monthly_expenses?: Prisma.FloatFieldUpdateOperationsInput | number;
     wealth?: Prisma.FloatFieldUpdateOperationsInput | number;
@@ -477,6 +521,8 @@ export type PersonaUncheckedUpdateManyInput = {
     gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     income?: Prisma.FloatFieldUpdateOperationsInput | number;
+    income_min?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
+    income_max?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
     savings?: Prisma.FloatFieldUpdateOperationsInput | number;
     monthly_expenses?: Prisma.FloatFieldUpdateOperationsInput | number;
     wealth?: Prisma.FloatFieldUpdateOperationsInput | number;
@@ -503,6 +549,8 @@ export type PersonaCountOrderByAggregateInput = {
     gender?: Prisma.SortOrder;
     education?: Prisma.SortOrder;
     income?: Prisma.SortOrder;
+    income_min?: Prisma.SortOrder;
+    income_max?: Prisma.SortOrder;
     savings?: Prisma.SortOrder;
     monthly_expenses?: Prisma.SortOrder;
     wealth?: Prisma.SortOrder;
@@ -517,6 +565,8 @@ export type PersonaCountOrderByAggregateInput = {
 export type PersonaAvgOrderByAggregateInput = {
     age?: Prisma.SortOrder;
     income?: Prisma.SortOrder;
+    income_min?: Prisma.SortOrder;
+    income_max?: Prisma.SortOrder;
     savings?: Prisma.SortOrder;
     monthly_expenses?: Prisma.SortOrder;
     wealth?: Prisma.SortOrder;
@@ -529,6 +579,8 @@ export type PersonaMaxOrderByAggregateInput = {
     gender?: Prisma.SortOrder;
     education?: Prisma.SortOrder;
     income?: Prisma.SortOrder;
+    income_min?: Prisma.SortOrder;
+    income_max?: Prisma.SortOrder;
     savings?: Prisma.SortOrder;
     monthly_expenses?: Prisma.SortOrder;
     wealth?: Prisma.SortOrder;
@@ -547,6 +599,8 @@ export type PersonaMinOrderByAggregateInput = {
     gender?: Prisma.SortOrder;
     education?: Prisma.SortOrder;
     income?: Prisma.SortOrder;
+    income_min?: Prisma.SortOrder;
+    income_max?: Prisma.SortOrder;
     savings?: Prisma.SortOrder;
     monthly_expenses?: Prisma.SortOrder;
     wealth?: Prisma.SortOrder;
@@ -561,6 +615,8 @@ export type PersonaMinOrderByAggregateInput = {
 export type PersonaSumOrderByAggregateInput = {
     age?: Prisma.SortOrder;
     income?: Prisma.SortOrder;
+    income_min?: Prisma.SortOrder;
+    income_max?: Prisma.SortOrder;
     savings?: Prisma.SortOrder;
     monthly_expenses?: Prisma.SortOrder;
     wealth?: Prisma.SortOrder;
@@ -621,6 +677,13 @@ export type FloatFieldUpdateOperationsInput = {
     multiply?: number;
     divide?: number;
 };
+export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null;
+    increment?: number;
+    decrement?: number;
+    multiply?: number;
+    divide?: number;
+};
 export type PersonaCreateWithoutUserInput = {
     id?: string;
     name: string;
@@ -628,6 +691,8 @@ export type PersonaCreateWithoutUserInput = {
     gender?: string | null;
     education?: string | null;
     income: number;
+    income_min?: number | null;
+    income_max?: number | null;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -645,6 +710,8 @@ export type PersonaUncheckedCreateWithoutUserInput = {
     gender?: string | null;
     education?: string | null;
     income: number;
+    income_min?: number | null;
+    income_max?: number | null;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -686,6 +753,8 @@ export type PersonaScalarWhereInput = {
     gender?: Prisma.StringNullableFilter<"Persona"> | string | null;
     education?: Prisma.StringNullableFilter<"Persona"> | string | null;
     income?: Prisma.FloatFilter<"Persona"> | number;
+    income_min?: Prisma.FloatNullableFilter<"Persona"> | number | null;
+    income_max?: Prisma.FloatNullableFilter<"Persona"> | number | null;
     savings?: Prisma.FloatFilter<"Persona"> | number;
     monthly_expenses?: Prisma.FloatFilter<"Persona"> | number;
     wealth?: Prisma.FloatFilter<"Persona"> | number;
@@ -704,6 +773,8 @@ export type PersonaCreateManyUserInput = {
     gender?: string | null;
     education?: string | null;
     income: number;
+    income_min?: number | null;
+    income_max?: number | null;
     savings: number;
     monthly_expenses: number;
     wealth: number;
@@ -721,6 +792,8 @@ export type PersonaUpdateWithoutUserInput = {
     gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     income?: Prisma.FloatFieldUpdateOperationsInput | number;
+    income_min?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
+    income_max?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
     savings?: Prisma.FloatFieldUpdateOperationsInput | number;
     monthly_expenses?: Prisma.FloatFieldUpdateOperationsInput | number;
     wealth?: Prisma.FloatFieldUpdateOperationsInput | number;
@@ -738,6 +811,8 @@ export type PersonaUncheckedUpdateWithoutUserInput = {
     gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     income?: Prisma.FloatFieldUpdateOperationsInput | number;
+    income_min?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
+    income_max?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
     savings?: Prisma.FloatFieldUpdateOperationsInput | number;
     monthly_expenses?: Prisma.FloatFieldUpdateOperationsInput | number;
     wealth?: Prisma.FloatFieldUpdateOperationsInput | number;
@@ -755,6 +830,8 @@ export type PersonaUncheckedUpdateManyWithoutUserInput = {
     gender?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
     income?: Prisma.FloatFieldUpdateOperationsInput | number;
+    income_min?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
+    income_max?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null;
     savings?: Prisma.FloatFieldUpdateOperationsInput | number;
     monthly_expenses?: Prisma.FloatFieldUpdateOperationsInput | number;
     wealth?: Prisma.FloatFieldUpdateOperationsInput | number;
@@ -772,6 +849,8 @@ export type PersonaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     gender?: boolean;
     education?: boolean;
     income?: boolean;
+    income_min?: boolean;
+    income_max?: boolean;
     savings?: boolean;
     monthly_expenses?: boolean;
     wealth?: boolean;
@@ -791,6 +870,8 @@ export type PersonaSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
     gender?: boolean;
     education?: boolean;
     income?: boolean;
+    income_min?: boolean;
+    income_max?: boolean;
     savings?: boolean;
     monthly_expenses?: boolean;
     wealth?: boolean;
@@ -810,6 +891,8 @@ export type PersonaSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
     gender?: boolean;
     education?: boolean;
     income?: boolean;
+    income_min?: boolean;
+    income_max?: boolean;
     savings?: boolean;
     monthly_expenses?: boolean;
     wealth?: boolean;
@@ -829,6 +912,8 @@ export type PersonaSelectScalar = {
     gender?: boolean;
     education?: boolean;
     income?: boolean;
+    income_min?: boolean;
+    income_max?: boolean;
     savings?: boolean;
     monthly_expenses?: boolean;
     wealth?: boolean;
@@ -840,7 +925,7 @@ export type PersonaSelectScalar = {
     createdAt?: boolean;
     user_id?: boolean;
 };
-export type PersonaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "age" | "gender" | "education" | "income" | "savings" | "monthly_expenses" | "wealth" | "debt" | "risk_appetite" | "spending_behavior" | "saving_preference" | "investment_preference" | "createdAt" | "user_id", ExtArgs["result"]["persona"]>;
+export type PersonaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "age" | "gender" | "education" | "income" | "income_min" | "income_max" | "savings" | "monthly_expenses" | "wealth" | "debt" | "risk_appetite" | "spending_behavior" | "saving_preference" | "investment_preference" | "createdAt" | "user_id", ExtArgs["result"]["persona"]>;
 export type PersonaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
     user?: boolean | Prisma.UserDefaultArgs<ExtArgs>;
 };
@@ -862,6 +947,8 @@ export type $PersonaPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
         gender: string | null;
         education: string | null;
         income: number;
+        income_min: number | null;
+        income_max: number | null;
         savings: number;
         monthly_expenses: number;
         wealth: number;
@@ -1233,6 +1320,8 @@ export interface PersonaFieldRefs {
     readonly gender: Prisma.FieldRef<"Persona", 'String'>;
     readonly education: Prisma.FieldRef<"Persona", 'String'>;
     readonly income: Prisma.FieldRef<"Persona", 'Float'>;
+    readonly income_min: Prisma.FieldRef<"Persona", 'Float'>;
+    readonly income_max: Prisma.FieldRef<"Persona", 'Float'>;
     readonly savings: Prisma.FieldRef<"Persona", 'Float'>;
     readonly monthly_expenses: Prisma.FieldRef<"Persona", 'Float'>;
     readonly wealth: Prisma.FieldRef<"Persona", 'Float'>;

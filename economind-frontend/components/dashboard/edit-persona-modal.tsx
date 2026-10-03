@@ -58,8 +58,12 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
       setValidationError('Age must be between 1 and 120')
       return
     }
-    if (form.income < 0) {
+    if (form.incomeMin < 0 || form.incomeMax < 0) {
       setValidationError('Income cannot be negative')
+      return
+    }
+    if (form.incomeMax < form.incomeMin) {
+      setValidationError('Income max must be greater than or equal to income min')
       return
     }
     if (form.savings < 0) {
@@ -150,35 +154,54 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
 
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Income ($/yr)</label>
+              <label className="text-sm font-medium">Income range ($/yr)</label>
               <span className="text-sm font-mono font-semibold text-primary">
-                ${form.income.toLocaleString()}
+                ${form.incomeMin.toLocaleString()} – ${form.incomeMax.toLocaleString()}
               </span>
             </div>
             <Slider
               className="mt-2.5 mb-1"
-              value={[Math.min(form.income, INCOME_SLIDER_MAX)]}
+              value={[
+                Math.min(form.incomeMin, INCOME_SLIDER_MAX),
+                Math.min(form.incomeMax, INCOME_SLIDER_MAX),
+              ]}
               onValueChange={(v) => {
-                const next = Array.isArray(v) ? v[0] : (v as number)
-                update('income', next)
+                const [next_min, next_max] = Array.isArray(v) ? v : [v as number, v as number]
+                setValidationError(null)
+                setForm((prev) =>
+                  prev ? { ...prev, incomeMin: Math.min(next_min, next_max), incomeMax: Math.max(next_min, next_max) } : prev
+                )
               }}
               min={0}
               max={INCOME_SLIDER_MAX}
               step={INCOME_SLIDER_STEP}
             />
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-xs text-muted-foreground">$0</span>
-              <input
-                type="number"
-                required
-                min={0}
-                max={100000000}
-                value={form.income}
-                onChange={(e) => update('income', Number(e.target.value))}
-                className="w-28 px-2 py-1 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
-                title="Exact value — the slider caps at $500K for finer control, type any amount here"
-              />
-              <span className="text-xs text-muted-foreground">${INCOME_SLIDER_MAX.toLocaleString()}+</span>
+            <div className="flex items-center justify-between mt-1 gap-2">
+              <span className="text-xs text-muted-foreground flex-shrink-0">$0</span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  max={100000000}
+                  value={form.incomeMin}
+                  onChange={(e) => update('incomeMin', Number(e.target.value))}
+                  className="w-24 px-2 py-1 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  title="Exact minimum — the slider caps at $500K, type any amount here"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  max={100000000}
+                  value={form.incomeMax}
+                  onChange={(e) => update('incomeMax', Number(e.target.value))}
+                  className="w-24 px-2 py-1 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  title="Exact maximum — the slider caps at $500K, type any amount here"
+                />
+              </div>
+              <span className="text-xs text-muted-foreground flex-shrink-0">${INCOME_SLIDER_MAX.toLocaleString()}+</span>
             </div>
           </div>
 

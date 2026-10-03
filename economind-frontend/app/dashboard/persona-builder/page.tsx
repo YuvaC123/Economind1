@@ -18,7 +18,11 @@ type ApiPersona = {
   age: number
   gender: string | null
   education: string | null
+  // income_min/max are nullable — personas created before the income-range
+  // feature shipped only have the legacy single "income" value in the DB.
   income: number
+  income_min: number | null
+  income_max: number | null
   wealth: number
   savings: number
   debt: number
@@ -36,7 +40,8 @@ function fromApiPersona(p: ApiPersona): Persona {
     age: p.age,
     gender: (p.gender as Persona['gender']) ?? 'other',
     education: (p.education as Persona['education']) ?? 'bachelors',
-    income: p.income,
+    incomeMin: p.income_min ?? p.income,
+    incomeMax: p.income_max ?? p.income,
     wealth: p.wealth,
     savings: p.savings,
     debt: p.debt,
@@ -54,7 +59,8 @@ function toApiPersona(p: Persona) {
     age: p.age,
     gender: p.gender,
     education: p.education,
-    income: p.income,
+    income_min: p.incomeMin,
+    income_max: p.incomeMax,
     wealth: p.wealth,
     savings: p.savings,
     debt: p.debt,
@@ -72,7 +78,8 @@ const BLANK_PERSONA: Omit<Persona, 'id'> = {
   age: 30,
   gender: 'other',
   education: 'bachelors',
-  income: 60000,
+  incomeMin: 55000,
+  incomeMax: 65000,
   wealth: 50000,
   savings: 10000,
   debt: 5000,
@@ -261,7 +268,7 @@ function PersonaListItem({
           <div>
             <h3 className="font-medium">{persona.name}</h3>
             <p className="text-sm text-muted-foreground font-mono">
-              Age: {persona.age} &bull; Income: ${(persona.income / 1000).toFixed(0)}K
+              Age: {persona.age} &bull; Income: ${(persona.incomeMin / 1000).toFixed(0)}K–${(persona.incomeMax / 1000).toFixed(0)}K
             </p>
           </div>
         </div>
