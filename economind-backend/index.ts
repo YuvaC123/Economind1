@@ -190,6 +190,10 @@ CRITICAL JSON RULES:
 Simulation rules:
 - Ground every number in the persona's traits and scenario conditions.
 - decisions are monthly dollar amounts (spending, saving, borrowing, investing).
+- Budget identity is mandatory: spending + saving + investing MUST equal
+  monthly_income + borrowing (money in must equal money out). The persona
+  object includes "monthly_income" — use it. Do not invent spending power
+  from nowhere, and do not leave money unaccounted for.
 - confidence values are between 0 and 1.
 - behavioralTraits and theoryAlignment values are between 0 and 100.
 
@@ -222,11 +226,19 @@ app.post('/simulate', authMiddleware, async (req: AuthedRequest, res: Response):
   }
   const { persona, scenario, persona_name = 'Unknown', scenario_name = 'Custom' } = parsed.data
 
+  // The persona's income is annual ($/yr). Every decision is a monthly dollar
+  // amount, so derive and hand the LLM the monthly figure explicitly instead
+  // of making it guess at a conversion — this is what the budget identity
+  // below (and the post-hoc rescale) is anchored to.
+  const annualIncome = typeof persona['income'] === 'number' ? (persona['income'] as number) : null
+  const monthlyIncome = annualIncome !== null ? annualIncome / 12 : null
+  const personaForPrompt = monthlyIncome !== null ? { ...persona, monthly_income: Math.round(monthlyIncome * 100) / 100 } : persona
+
   const userPrompt = `Simulate this consumer persona under this macroeconomic scenario.
 Return ONLY valid JSON. Every string must use double quotes.
 
 Persona:
-${JSON.stringify(persona, null, 2)}
+${JSON.stringify(personaForPrompt, null, 2)}
 
 Scenario:
 ${JSON.stringify(scenario, null, 2)}`
@@ -263,9 +275,40 @@ ${JSON.stringify(scenario, null, 2)}`
     }
 
     // Normalize keys
+    const toFiniteNumber = (value: unknown, fallback: number): number => {
+      const n = Number(value)
+      return Number.isFinite(n) ? n : fallback
+    }
+
+    const rawDecisions = (simulation.decisions ?? {}) as Record<string, unknown>
+    let decisions = {
+      spending: toFiniteNumber(rawDecisions['spending'], 3000),
+      saving: toFiniteNumber(rawDecisions['saving'], 1000),
+      borrowing: toFiniteNumber(rawDecisions['borrowing'], 0),
+      investing: toFiniteNumber(rawDecisions['investing'], 500),
+    }
+
+    // Hard guarantee of the budget identity regardless of how well the LLM
+    // honored the prompt: rescale spending/saving/investing proportionally
+    // (preserving the LLM's relative emphasis) so they sum exactly to
+    // monthly income + borrowing. Money in must equal money out.
+    if (monthlyIncome !== null) {
+      const totalOut = decisions.spending + decisions.saving + decisions.investing
+      const totalIn = monthlyIncome + decisions.borrowing
+      if (totalOut > 0 && totalIn > 0) {
+        const scale = totalIn / totalOut
+        decisions = {
+          spending: Math.round(decisions.spending * scale),
+          saving: Math.round(decisions.saving * scale),
+          investing: Math.round(decisions.investing * scale),
+          borrowing: Math.round(decisions.borrowing),
+        }
+      }
+    }
+
     const normalized = {
       summary: simulation.summary || 'Simulation completed successfully.',
-      decisions: simulation.decisions || { spending: 3000, saving: 1000, borrowing: 0, investing: 500 },
+      decisions,
       confidence: simulation.confidence || { spending: 0.8, saving: 0.8, borrowing: 0.7, investing: 0.75 },
       behavioralTraits: simulation.behavioralTraits || simulation.behavioral_traits || {
         riskTolerance: 50,
@@ -303,7 +346,10 @@ ${JSON.stringify(scenario, null, 2)}`
       console.error('[SIMULATE DB PERSIST ERROR]:', persistErr)
     }
 
-    return res.status(200).json(normalized)
+    // monthlyIncome/annualIncome are returned for display only (e.g. "these
+    // figures are monthly, based on a $X/yr income") — not persisted, since
+    // the Simulation table has no column for them.
+    return res.status(200).json({ ...normalized, monthlyIncome, annualIncome })
   } catch (error) {
     console.error('[SIMULATE ROUTE ERROR]:', error)
     return res.status(500).json({ msg: 'Simulation failed', error: String(error) })

@@ -133,19 +133,28 @@ function ResultsContent() {
               <p className="text-muted-foreground leading-relaxed">
                 {result.summary}
               </p>
+
+              {Number.isFinite(result.monthlyIncome) && (
+                <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border font-mono">
+                  Based on ${Math.round(safeNumber(result.annualIncome)).toLocaleString()}/yr income
+                  {' '}(${Math.round(safeNumber(result.monthlyIncome)).toLocaleString()}/mo) — every dollar figure
+                  below is a <span className="font-semibold">monthly</span> amount, and spending + saving +
+                  investing is balanced to equal monthly income + borrowing.
+                </p>
+              )}
             </CardContent>
           </Card>
 
-          {/* Decision Summary */}
+          {/* Decision Summary — all figures are monthly dollar amounts */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
               {
-                label: 'Monthly Spending',
+                label: 'Spending',
                 value: `$${safeNumber(result.decisions?.spending).toFixed(0)}`,
                 confidence: `${(safeNumber(result.confidence?.spending, 0.75) * 100).toFixed(0)}%`,
               },
               {
-                label: 'Savings',
+                label: 'Saving',
                 value: `$${safeNumber(result.decisions?.saving).toFixed(0)}`,
                 confidence: `${(safeNumber(result.confidence?.saving, 0.75) * 100).toFixed(0)}%`,
               },
@@ -170,6 +179,7 @@ function ResultsContent() {
 
                 <p className="text-4xl font-mono font-semibold tracking-tight text-primary mt-2">
                   {item.value}
+                  <span className="text-sm font-medium text-muted-foreground ml-1.5">/mo</span>
                 </p>
 
                 <p className="text-xs text-muted-foreground mt-2 font-mono">

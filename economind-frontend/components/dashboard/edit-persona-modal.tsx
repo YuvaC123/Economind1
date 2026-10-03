@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react'
 import { X, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
 import { Persona } from '@/lib/mock-data'
+
+// Covers the typical persona range with real precision; the number input
+// next to it still accepts anything up to the $100M validation ceiling.
+const INCOME_SLIDER_MAX = 500_000
+const INCOME_SLIDER_STEP = 1_000
 
 interface EditPersonaModalProps {
   persona: Persona | null
@@ -142,9 +148,26 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
+          <div>
+            <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Income ($/yr)</label>
+              <span className="text-sm font-mono font-semibold text-primary">
+                ${form.income.toLocaleString()}
+              </span>
+            </div>
+            <Slider
+              className="mt-2.5 mb-1"
+              value={[Math.min(form.income, INCOME_SLIDER_MAX)]}
+              onValueChange={(v) => {
+                const next = Array.isArray(v) ? v[0] : (v as number)
+                update('income', next)
+              }}
+              min={0}
+              max={INCOME_SLIDER_MAX}
+              step={INCOME_SLIDER_STEP}
+            />
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs text-muted-foreground">$0</span>
               <input
                 type="number"
                 required
@@ -152,9 +175,14 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 max={100000000}
                 value={form.income}
                 onChange={(e) => update('income', Number(e.target.value))}
-                className={fieldClass}
+                className="w-28 px-2 py-1 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                title="Exact value — the slider caps at $500K for finer control, type any amount here"
               />
+              <span className="text-xs text-muted-foreground">${INCOME_SLIDER_MAX.toLocaleString()}+</span>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium">Wealth ($)</label>
               <input
@@ -167,9 +195,6 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 className={fieldClass}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium">Savings ($)</label>
               <input
@@ -182,6 +207,9 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 className={fieldClass}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium">Debt ($)</label>
               <input
@@ -194,19 +222,18 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 className={fieldClass}
               />
             </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Monthly expenses ($)</label>
-            <input
-              type="number"
-              required
-              min={0}
-              max={10000000}
-              value={form.monthlyExpenses}
-              onChange={(e) => update('monthlyExpenses', Number(e.target.value))}
-              className={fieldClass}
-            />
+            <div>
+              <label className="text-sm font-medium">Monthly expenses ($)</label>
+              <input
+                type="number"
+                required
+                min={0}
+                max={10000000}
+                value={form.monthlyExpenses}
+                onChange={(e) => update('monthlyExpenses', Number(e.target.value))}
+                className={fieldClass}
+              />
+            </div>
           </div>
         </div>
 
