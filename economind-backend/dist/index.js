@@ -155,6 +155,42 @@ app.post("/signin", async (req, res) => {
         return res.status(500).json({ msg: "Internal server error", error });
     }
 });
+// ─── Tax estimate ────────────────────────────────────────────────────────────
+// Simplified single-filer US federal brackets (2024) + standard deduction.
+// No state tax, no credits, no filing-status nuance — this is a simulation
+// estimate, not tax advice, and is labeled as such everywhere it surfaces.
+// The point: take-home pay, not gross income, is what a person actually has
+// to spend/save/invest, so the budget identity below must balance against
+// NET income or the whole simulation overstates what's available.
+const STANDARD_DEDUCTION_2024 = 14_600;
+const FEDERAL_BRACKETS_2024 = [
+    { upTo: 11_600, rate: 0.1 },
+    { upTo: 47_150, rate: 0.12 },
+    { upTo: 100_525, rate: 0.22 },
+    { upTo: 191_950, rate: 0.24 },
+    { upTo: 243_725, rate: 0.32 },
+    { upTo: 609_350, rate: 0.35 },
+    { upTo: Infinity, rate: 0.37 },
+];
+function estimateFederalTax(grossAnnualIncome) {
+    const taxable = Math.max(0, grossAnnualIncome - STANDARD_DEDUCTION_2024);
+    let tax = 0;
+    let lastCap = 0;
+    for (const bracket of FEDERAL_BRACKETS_2024) {
+        if (taxable <= lastCap)
+            break;
+        const amountInBracket = Math.min(taxable, bracket.upTo) - lastCap;
+        tax += amountInBracket * bracket.rate;
+        lastCap = bracket.upTo;
+    }
+    return Math.round(tax);
+}
+function estimateNetIncome(grossAnnualIncome) {
+    const tax = estimateFederalTax(grossAnnualIncome);
+    const net = Math.max(0, grossAnnualIncome - tax);
+    const effectiveRate = grossAnnualIncome > 0 ? tax / grossAnnualIncome : 0;
+    return { tax, net, effectiveRate };
+}
 const systemPrompt = `You are EconoMind's behavioral simulation engine.
 
 Given a consumer persona and macroeconomic scenario, simulate how that persona would behave financially.
@@ -171,7 +207,10 @@ Simulation rules:
 - decisions are monthly dollar amounts (spending, saving, borrowing, investing).
 - Budget identity is mandatory: spending + saving + investing MUST equal
   monthly_income + borrowing (money in must equal money out). The persona
-  object includes "monthly_income" — use it. Do not invent spending power
+  object's "monthly_income" is already NET of estimated tax — it is the
+  actual take-home pay available to budget, not gross income. Use it as-is;
+  do not apply tax again. "monthly_income_gross" and "estimated_tax_rate"
+  are given only for context in your reasoning. Do not invent spending power
   from nowhere, and do not leave money unaccounted for.
 - confidence values are between 0 and 1.
 - behavioralTraits and theoryAlignment values are between 0 and 100.
@@ -210,9 +249,21 @@ app.post('/simulate', authMiddleware, async (req, res) => {
     const incomeMin = typeof persona['income_min'] === 'number' ? persona['income_min'] : null;
     const incomeMax = typeof persona['income_max'] === 'number' ? persona['income_max'] : null;
     const annualIncome = incomeMin !== null && incomeMax !== null ? (incomeMin + incomeMax) / 2 : null;
-    const monthlyIncome = annualIncome !== null ? annualIncome / 12 : null;
+    // Tax matters: a budget balanced against gross pay overstates what's
+    // actually available to spend/save/invest. Estimate take-home (net) income
+    // and anchor the budget identity on THAT, not gross.
+    const taxInfo = annualIncome !== null ? estimateNetIncome(annualIncome) : null;
+    const annualIncomeNet = taxInfo !== null ? taxInfo.net : null;
+    const monthlyIncomeGross = annualIncome !== null ? annualIncome / 12 : null;
+    const monthlyIncome = annualIncomeNet !== null ? annualIncomeNet / 12 : null; // the actual rescale anchor — NET
     const personaForPrompt = monthlyIncome !== null
-        ? { ...persona, monthly_income: Math.round(monthlyIncome * 100) / 100, monthly_income_range: [Math.round(incomeMin / 12), Math.round(incomeMax / 12)] }
+        ? {
+            ...persona,
+            monthly_income: Math.round(monthlyIncome * 100) / 100,
+            monthly_income_gross: Math.round(monthlyIncomeGross * 100) / 100,
+            estimated_tax_rate: Math.round(taxInfo.effectiveRate * 1000) / 1000,
+            monthly_income_range: [Math.round(incomeMin / 12), Math.round(incomeMax / 12)],
+        }
         : persona;
     const userPrompt = `Simulate this consumer persona under this macroeconomic scenario.
 Return ONLY valid JSON. Every string must use double quotes.
@@ -319,10 +370,22 @@ ${JSON.stringify(scenario, null, 2)}`;
         catch (persistErr) {
             console.error('[SIMULATE DB PERSIST ERROR]:', persistErr);
         }
-        // monthlyIncome/annualIncome are returned for display only (e.g. "these
-        // figures are monthly, based on a $X/yr income") — not persisted, since
-        // the Simulation table has no column for them.
-        return res.status(200).json({ ...normalized, monthlyIncome, annualIncome, annualIncomeMin: incomeMin, annualIncomeMax: incomeMax });
+        // Income/tax figures are returned for display only (e.g. the results
+        // page's "gross -> tax -> net" breakdown) — not persisted, since the
+        // Simulation table has no columns for them. monthlyIncome is NET (the
+        // actual budget anchor); monthlyIncomeGross and estimatedTaxRate exist
+        // so the frontend can show the tax bite rather than just the result.
+        return res.status(200).json({
+            ...normalized,
+            monthlyIncome,
+            monthlyIncomeGross,
+            annualIncome,
+            annualIncomeNet,
+            annualIncomeMin: incomeMin,
+            annualIncomeMax: incomeMax,
+            estimatedTaxRate: taxInfo?.effectiveRate ?? null,
+            estimatedAnnualTax: taxInfo?.tax ?? null,
+        });
     }
     catch (error) {
         console.error('[SIMULATE ROUTE ERROR]:', error);
