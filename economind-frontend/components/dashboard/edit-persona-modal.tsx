@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { X, Save, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
@@ -29,19 +30,35 @@ function FieldLabel({ text, hint, trailing }: { text: string; hint: string; trai
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <label className="text-sm font-medium">{text}</label>
-          <button
+          <motion.button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.85 }}
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+            className={`cursor-pointer rounded-full ${open ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
             aria-label={`What does "${text}" mean?`}
             aria-expanded={open}
           >
             <Info className="w-3.5 h-3.5" />
-          </button>
+          </motion.button>
         </div>
         {trailing}
       </div>
-      {open && <p className="text-xs text-muted-foreground mt-1.5 leading-snug">{hint}</p>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.p
+            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+            animate={{ height: 'auto', opacity: 1, marginTop: 6 }}
+            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            className="text-xs text-muted-foreground leading-snug overflow-hidden"
+          >
+            {hint}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </>
   )
 }
