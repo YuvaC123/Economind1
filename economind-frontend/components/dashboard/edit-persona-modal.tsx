@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Save } from 'lucide-react'
+import { X, Save, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Persona } from '@/lib/mock-data'
@@ -19,7 +19,32 @@ interface EditPersonaModalProps {
 
 const fieldClass =
   'mt-1.5 w-full px-3.5 py-2.5 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30'
-const hintClass = 'text-xs text-muted-foreground mt-1 leading-snug'
+
+// Label + a small (i) icon that reveals a one-line definition on click.
+// Click rather than hover so it works on touch devices too.
+function FieldLabel({ text, hint, trailing }: { text: string; hint: string; trailing?: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <label className="text-sm font-medium">{text}</label>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+            aria-label={`What does "${text}" mean?`}
+            aria-expanded={open}
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        {trailing}
+      </div>
+      {open && <p className="text-xs text-muted-foreground mt-1.5 leading-snug">{hint}</p>}
+    </>
+  )
+}
 
 export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalProps) {
   const [form, setForm] = useState<Persona | null>(persona)
@@ -140,8 +165,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Risk appetite</label>
-              <p className={hintClass}>How much investment risk they're comfortable taking.</p>
+              <FieldLabel text="Risk appetite" hint="How much investment risk they're comfortable taking." />
               <select
                 value={form.riskAppetite}
                 onChange={(e) => update('riskAppetite', e.target.value as Persona['riskAppetite'])}
@@ -155,16 +179,15 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
           </div>
 
           <div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Income range ($/yr)</label>
-              <span className="text-sm font-mono font-semibold text-primary">
-                ${form.incomeMin.toLocaleString()} – ${form.incomeMax.toLocaleString()}
-              </span>
-            </div>
-            <p className={hintClass}>
-              Gross (before-tax) annual income. The simulation estimates taxes and budgets from
-              take-home pay, not this raw figure.
-            </p>
+            <FieldLabel
+              text="Income range ($/yr)"
+              hint="Gross (before-tax) annual income. The simulation estimates taxes and budgets from take-home pay, not this raw figure."
+              trailing={
+                <span className="text-sm font-mono font-semibold text-primary">
+                  ${form.incomeMin.toLocaleString()} – ${form.incomeMax.toLocaleString()}
+                </span>
+              }
+            />
             <Slider
               className="mt-2.5 mb-1"
               value={[
@@ -213,8 +236,10 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Wealth ($)</label>
-              <p className={hintClass}>Total net worth — all assets combined (investments, property equity, retirement accounts).</p>
+              <FieldLabel
+                text="Wealth ($)"
+                hint="Total net worth — all assets combined (investments, property equity, retirement accounts)."
+              />
               <input
                 type="number"
                 required
@@ -226,8 +251,10 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Savings ($)</label>
-              <p className={hintClass}>Liquid cash on hand, e.g. checking/savings balance — a slice of wealth, not the whole thing.</p>
+              <FieldLabel
+                text="Savings ($)"
+                hint="Liquid cash on hand, e.g. checking/savings balance — a slice of wealth, not the whole thing."
+              />
               <input
                 type="number"
                 required
@@ -242,8 +269,10 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Debt ($)</label>
-              <p className={hintClass}>Total outstanding liabilities — loans, credit cards, mortgage balance owed.</p>
+              <FieldLabel
+                text="Debt ($)"
+                hint="Total outstanding liabilities — loans, credit cards, mortgage balance owed."
+              />
               <input
                 type="number"
                 required
@@ -255,8 +284,10 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Monthly expenses ($)</label>
-              <p className={hintClass}>Recurring monthly costs — rent, bills, groceries — before any spending the simulation decides.</p>
+              <FieldLabel
+                text="Monthly expenses ($)"
+                hint="Recurring monthly costs — rent, bills, groceries — before any spending the simulation decides."
+              />
               <input
                 type="number"
                 required
