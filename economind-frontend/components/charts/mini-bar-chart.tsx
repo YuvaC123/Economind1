@@ -16,8 +16,8 @@ export function MiniBarChart({ data, formatValue, height = 140 }: MiniBarChartPr
 
   return (
     <div className="w-full flex items-end justify-between gap-3">
-      {data.map((d) => (
-        <div key={d.label} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+      {data.map((d, i) => (
+        <div key={`${d.label}-${i}`} className="flex-1 flex flex-col items-center gap-2 min-w-0">
           <span className="text-xs font-medium">{formatValue ? formatValue(d.value) : d.value}</span>
           <div className="w-full rounded-md bg-muted relative overflow-hidden" style={{ height }}>
             <div
