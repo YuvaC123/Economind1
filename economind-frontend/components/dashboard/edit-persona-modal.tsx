@@ -20,6 +20,9 @@ interface EditPersonaModalProps {
 
 const fieldClass =
   'mt-1.5 w-full px-3.5 py-2.5 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30'
+// Dollar figures get a monospace, tabular-nums treatment so digits line up
+// and match the monospace income range display above them.
+const numericFieldClass = `${fieldClass} font-mono tabular-nums`
 
 // Label + a small (i) icon that reveals a one-line definition on click.
 // Click rather than hover so it works on touch devices too.
@@ -28,16 +31,18 @@ function FieldLabel({ text, hint, trailing }: { text: string; hint: string; trai
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <label className="text-sm font-medium">{text}</label>
           <motion.button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.85 }}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.8, rotate: open ? 160 : 20 }}
             animate={{ rotate: open ? 180 : 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-            className={`cursor-pointer rounded-full ${open ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+            transition={{ type: 'spring', stiffness: 450, damping: 15 }}
+            className={`flex items-center justify-center p-1 rounded-full cursor-pointer transition-colors duration-150 ${
+              open ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'
+            }`}
             aria-label={`What does "${text}" mean?`}
             aria-expanded={open}
           >
@@ -52,8 +57,8 @@ function FieldLabel({ text, hint, trailing }: { text: string; hint: string; trai
             initial={{ height: 0, opacity: 0, marginTop: 0 }}
             animate={{ height: 'auto', opacity: 1, marginTop: 6 }}
             exit={{ height: 0, opacity: 0, marginTop: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-            className="text-xs text-muted-foreground leading-snug overflow-hidden"
+            transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+            className="text-xs text-muted-foreground leading-relaxed overflow-hidden"
           >
             {hint}
           </motion.p>
@@ -155,7 +160,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
           </div>
         )}
 
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
             <label className="text-sm font-medium">Name</label>
             <input
@@ -168,7 +173,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-5">
             <div>
               <label className="text-sm font-medium">Age</label>
               <input
@@ -178,7 +183,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 max={120}
                 value={form.age}
                 onChange={(e) => update('age', Number(e.target.value))}
-                className={fieldClass}
+                className={numericFieldClass}
               />
             </div>
             <div>
@@ -222,9 +227,9 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
               max={INCOME_SLIDER_MAX}
               step={INCOME_SLIDER_STEP}
             />
-            <div className="flex items-center justify-between mt-2 gap-3">
+            <div className="flex items-center justify-between mt-3 gap-3">
               <span className="text-xs text-muted-foreground flex-shrink-0">$0</span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <input
                   type="number"
                   required
@@ -232,7 +237,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                   max={100000000}
                   value={form.incomeMin}
                   onChange={(e) => update('incomeMin', Number(e.target.value))}
-                  className="w-28 px-2.5 py-1.5 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-28 px-2.5 py-1.5 border border-border rounded-md text-xs font-mono tabular-nums text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
                   title="Exact minimum — the slider caps at $500K, type any amount here"
                 />
                 <span className="text-xs text-muted-foreground flex-shrink-0">to</span>
@@ -243,7 +248,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                   max={100000000}
                   value={form.incomeMax}
                   onChange={(e) => update('incomeMax', Number(e.target.value))}
-                  className="w-28 px-2.5 py-1.5 border border-border rounded-md text-xs text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-28 px-2.5 py-1.5 border border-border rounded-md text-xs font-mono tabular-nums text-right bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
                   title="Exact maximum — the slider caps at $500K, type any amount here"
                 />
               </div>
@@ -251,7 +256,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-5">
             <div>
               <FieldLabel
                 text="Wealth ($)"
@@ -264,7 +269,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 max={1000000000}
                 value={form.wealth}
                 onChange={(e) => update('wealth', Number(e.target.value))}
-                className={fieldClass}
+                className={numericFieldClass}
               />
             </div>
             <div>
@@ -279,12 +284,12 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 max={100000000}
                 value={form.savings}
                 onChange={(e) => update('savings', Number(e.target.value))}
-                className={fieldClass}
+                className={numericFieldClass}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-5">
             <div>
               <FieldLabel
                 text="Debt ($)"
@@ -297,7 +302,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 max={100000000}
                 value={form.debt}
                 onChange={(e) => update('debt', Number(e.target.value))}
-                className={fieldClass}
+                className={numericFieldClass}
               />
             </div>
             <div>
@@ -312,7 +317,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 max={10000000}
                 value={form.monthlyExpenses}
                 onChange={(e) => update('monthlyExpenses', Number(e.target.value))}
-                className={fieldClass}
+                className={numericFieldClass}
               />
             </div>
           </div>
