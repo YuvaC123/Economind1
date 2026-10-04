@@ -19,6 +19,7 @@ interface EditPersonaModalProps {
 
 const fieldClass =
   'mt-1.5 w-full px-3.5 py-2.5 border border-border rounded-lg text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30'
+const hintClass = 'text-xs text-muted-foreground mt-1 leading-snug'
 
 export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalProps) {
   const [form, setForm] = useState<Persona | null>(persona)
@@ -140,6 +141,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             </div>
             <div>
               <label className="text-sm font-medium">Risk appetite</label>
+              <p className={hintClass}>How much investment risk they're comfortable taking.</p>
               <select
                 value={form.riskAppetite}
                 onChange={(e) => update('riskAppetite', e.target.value as Persona['riskAppetite'])}
@@ -159,6 +161,10 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 ${form.incomeMin.toLocaleString()} – ${form.incomeMax.toLocaleString()}
               </span>
             </div>
+            <p className={hintClass}>
+              Gross (before-tax) annual income. The simulation estimates taxes and budgets from
+              take-home pay, not this raw figure.
+            </p>
             <Slider
               className="mt-2.5 mb-1"
               value={[
@@ -208,6 +214,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Wealth ($)</label>
+              <p className={hintClass}>Total net worth — all assets combined (investments, property equity, retirement accounts).</p>
               <input
                 type="number"
                 required
@@ -220,6 +227,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             </div>
             <div>
               <label className="text-sm font-medium">Savings ($)</label>
+              <p className={hintClass}>Liquid cash on hand, e.g. checking/savings balance — a slice of wealth, not the whole thing.</p>
               <input
                 type="number"
                 required
@@ -235,6 +243,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Debt ($)</label>
+              <p className={hintClass}>Total outstanding liabilities — loans, credit cards, mortgage balance owed.</p>
               <input
                 type="number"
                 required
@@ -247,6 +256,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             </div>
             <div>
               <label className="text-sm font-medium">Monthly expenses ($)</label>
+              <p className={hintClass}>Recurring monthly costs — rent, bills, groceries — before any spending the simulation decides.</p>
               <input
                 type="number"
                 required
