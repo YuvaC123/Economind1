@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Save, Info } from 'lucide-react'
+import { X, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
+import { InfoIconButton } from '@/components/shared/info-icon-button'
 import { Persona } from '@/lib/mock-data'
 
 // Covers the typical persona range with real precision; the number input
@@ -33,21 +34,7 @@ function FieldLabel({ text, hint, trailing }: { text: string; hint: string; trai
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <label className="text-sm font-medium">{text}</label>
-          <motion.button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.8, rotate: open ? 160 : 20 }}
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ type: 'spring', stiffness: 450, damping: 15 }}
-            className={`flex items-center justify-center p-1 rounded-full cursor-pointer transition-colors duration-150 ${
-              open ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'
-            }`}
-            aria-label={`What does "${text}" mean?`}
-            aria-expanded={open}
-          >
-            <Info className="w-3.5 h-3.5" />
-          </motion.button>
+          <InfoIconButton open={open} onToggle={() => setOpen((o) => !o)} label={text} />
         </div>
         {trailing}
       </div>

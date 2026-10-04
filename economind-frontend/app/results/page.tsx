@@ -2,11 +2,13 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Download, Share2, ArrowLeft, Check } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageTransition } from '@/components/shared/page-transition'
+import { InfoIconButton } from '@/components/shared/info-icon-button'
 
 // The LLM's JSON response isn't strictly typed - a field can come back as a
 // string, be missing, or be out of range. Never trust it enough to call
@@ -14,6 +16,27 @@ import { PageTransition } from '@/components/shared/page-transition'
 function safeNumber(value: unknown, fallback = 0): number {
   const n = Number(value)
   return Number.isFinite(n) ? n : fallback
+}
+
+// Plain-language definitions for the jargon-heavy keys the LLM returns.
+// Falls back to a generic line for any key not in this map (the model
+// occasionally varies its exact field names).
+const TRAIT_DEFINITIONS: Record<string, string> = {
+  riskTolerance: "How comfortable this consumer is with uncertain outcomes — higher means they'll accept more risk for potential reward.",
+  futureOrientation: 'How much weight they give to future outcomes versus immediate gratification.',
+  impulsivity: 'How likely they are to make quick, unplanned financial decisions rather than deliberate ones.',
+  socialConformity: "How much their decisions are swayed by what peers or the broader market are doing, rather than independent judgment.",
+}
+
+const THEORY_DEFINITIONS: Record<string, string> = {
+  rationalChoice: 'Classical economics: consumers make decisions that maximize their own utility using all available information.',
+  behavioralEconomics: 'Real decisions are shaped by cognitive biases and heuristics, not pure rational calculation.',
+  keynesianEconomics: 'Spending is driven primarily by current income — consumption rises and falls with take-home pay.',
+  austrianEconomics: 'Emphasizes individual choice, time preference, and skepticism of aggregate economic planning.',
+}
+
+function definitionFor(map: Record<string, string>, key: string): string {
+  return map[key] ?? 'A model-estimated score for this factor, from 0 (low) to 100 (high).'
 }
 
 function ResultsContent() {
@@ -25,6 +48,8 @@ function ResultsContent() {
 
   const [copied, setCopied] = useState(false)
   const [exported, setExported] = useState(false)
+  const [openHints, setOpenHints] = useState<Record<string, boolean>>({})
+  const toggleHint = (key: string) => setOpenHints((prev) => ({ ...prev, [key]: !prev[key] }))
 
   useEffect(() => {
     const storedResult = sessionStorage.getItem('simulationResult')
@@ -179,6 +204,29 @@ function ResultsContent() {
           </Card>
 
           {/* Decision Summary — all figures are monthly dollar amounts */}
+          <div>
+            <div className="flex items-center gap-1 mb-2">
+              <p className="text-sm font-medium text-muted-foreground">Monthly decisions</p>
+              <InfoIconButton
+                open={!!openHints.confidence}
+                onToggle={() => toggleHint('confidence')}
+                label="Confidence"
+              />
+            </div>
+            <AnimatePresence initial={false}>
+              {openHints.confidence && (
+                <motion.p
+                  initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                  animate={{ height: 'auto', opacity: 1, marginBottom: 12 }}
+                  exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                  className="text-xs text-muted-foreground leading-relaxed overflow-hidden -mt-1"
+                >
+                  Each tile&apos;s &quot;Confidence&quot; is the model&apos;s self-reported confidence in that
+                  specific decision — not a probability that the outcome will happen.
+                </motion.p>
+              )}
+            </AnimatePresence>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
               {
@@ -220,6 +268,7 @@ function ResultsContent() {
                 </p>
               </div>
             ))}
+            </div>
           </div>
 
           {/* Decision Timeline */}
@@ -283,27 +332,42 @@ function ResultsContent() {
                     const numericValue = Number.isFinite(parsed)
                       ? Math.min(100, Math.max(0, parsed))
                       : 0
+                    const hintKey = `trait-${key}`
+                    const readableLabel = key
+                      .replace(/[_-]/g, ' ')
+                      .replace(/([A-Z])/g, ' $1')
+                      .trim()
 
                     return (
                       <div key={key}>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-medium capitalize">
-                            {key
-                              .replace(
-                                /[_-]/g,
-                                ' '
-                              )
-                              .replace(
-                                /([A-Z])/g,
-                                ' $1'
-                              )
-                              .trim()}
+                        <div className="flex justify-between items-center mb-2 gap-2">
+                          <span className="flex items-center gap-1 text-sm font-medium capitalize">
+                            {readableLabel}
+                            <InfoIconButton
+                              open={!!openHints[hintKey]}
+                              onToggle={() => toggleHint(hintKey)}
+                              label={readableLabel}
+                            />
                           </span>
 
-                          <span className="text-sm font-mono font-semibold">
+                          <span className="text-sm font-mono font-semibold flex-shrink-0">
                             {numericValue.toFixed(0)}%
                           </span>
                         </div>
+
+                        <AnimatePresence initial={false}>
+                          {openHints[hintKey] && (
+                            <motion.p
+                              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                              animate={{ height: 'auto', opacity: 1, marginBottom: 8 }}
+                              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                              className="text-xs text-muted-foreground leading-relaxed overflow-hidden"
+                            >
+                              {definitionFor(TRAIT_DEFINITIONS, key)}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
 
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
@@ -341,27 +405,42 @@ function ResultsContent() {
                     const numericValue = Number.isFinite(parsed)
                       ? Math.min(100, Math.max(0, parsed))
                       : 0
+                    const hintKey = `theory-${key}`
+                    const readableLabel = key
+                      .replace(/[_-]/g, ' ')
+                      .replace(/([A-Z])/g, ' $1')
+                      .trim()
 
                     return (
                       <div key={key}>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-medium capitalize">
-                            {key
-                              .replace(
-                                /[_-]/g,
-                                ' '
-                              )
-                              .replace(
-                                /([A-Z])/g,
-                                ' $1'
-                              )
-                              .trim()}
+                        <div className="flex justify-between items-center mb-2 gap-2">
+                          <span className="flex items-center gap-1 text-sm font-medium capitalize">
+                            {readableLabel}
+                            <InfoIconButton
+                              open={!!openHints[hintKey]}
+                              onToggle={() => toggleHint(hintKey)}
+                              label={readableLabel}
+                            />
                           </span>
 
-                          <span className="text-sm font-mono font-semibold">
+                          <span className="text-sm font-mono font-semibold flex-shrink-0">
                             {numericValue.toFixed(0)}%
                           </span>
                         </div>
+
+                        <AnimatePresence initial={false}>
+                          {openHints[hintKey] && (
+                            <motion.p
+                              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                              animate={{ height: 'auto', opacity: 1, marginBottom: 8 }}
+                              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                              className="text-xs text-muted-foreground leading-relaxed overflow-hidden"
+                            >
+                              {definitionFor(THEORY_DEFINITIONS, key)}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
 
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
