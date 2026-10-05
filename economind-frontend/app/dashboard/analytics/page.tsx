@@ -390,12 +390,12 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        {/* Title and the persona selector always share one row, regardless of
-            how long the subtitle or persona name get — the subtitle is a
-            separate full-width row below so it can never push the selector
-            onto its own line and make the header reflow differently per persona. */}
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="font-heading text-3xl font-medium mb-1 flex-shrink-0">Analytics Dashboard</h2>
+        {/* Title and the persona selector share one row that wraps only for
+            genuine viewport-width reasons — the subtitle (whose length varies
+            with the persona's name) lives on its own full-width row below so
+            it can never be what pushes the selector onto a second line. */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h2 className="font-heading text-3xl font-medium mb-1">Analytics Dashboard</h2>
 
           {personas.length > 0 && (
             <div className="min-w-[220px] flex-shrink-0">
