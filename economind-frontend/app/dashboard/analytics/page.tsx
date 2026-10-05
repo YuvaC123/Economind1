@@ -195,6 +195,43 @@ export default function AnalyticsPage() {
   const isAllMode = selectedPersonaId === ALL_PERSONAS
   const selectedPersona = isAllMode ? null : personas.find((p) => p.id === selectedPersonaId) ?? null
 
+  // A synthetic "persona" blending every real one, so the "All personas"
+  // view can reuse the exact same strip/stat-card/chart layout as a single
+  // persona instead of swapping to a different UI — only the numbers differ.
+  const aggregatePersona: Persona | null = useMemo(() => {
+    if (personas.length === 0) return null
+    const n = personas.length
+    const avg = (f: (p: Persona) => number) => Math.round(personas.reduce((a, p) => a + f(p), 0) / n)
+    const riskCounts: Record<string, number> = {}
+    personas.forEach((p) => {
+      riskCounts[p.riskAppetite] = (riskCounts[p.riskAppetite] || 0) + 1
+    })
+    const riskAppetite = (Object.entries(riskCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ??
+      'moderate') as Persona['riskAppetite']
+
+    return {
+      id: ALL_PERSONAS,
+      name: `All ${n} Persona${n === 1 ? '' : 's'}`,
+      age: avg((p) => p.age),
+      gender: 'other',
+      education: 'bachelors',
+      incomeMin: avg((p) => p.incomeMin),
+      incomeMax: avg((p) => p.incomeMax),
+      wealth: avg((p) => p.wealth),
+      savings: avg((p) => p.savings),
+      debt: avg((p) => p.debt),
+      monthlyExpenses: avg((p) => p.monthlyExpenses),
+      riskAppetite,
+      spendingBehavior: 'balanced',
+      savingPreference: 'retirement',
+      investmentPreference: 'diversified',
+    }
+  }, [personas])
+
+  // Whichever persona (real or blended) the page is currently showing — the
+  // UI below always renders the same way regardless of which one this is.
+  const effectivePersona = selectedPersona ?? aggregatePersona
+
   // Simulations don't store a persona_id (only a point-in-time name snapshot),
   // so matching by name is the closest link available. A persona renamed
   // after a run won't match its own old history — an acceptable gap here.
@@ -225,18 +262,18 @@ export default function AnalyticsPage() {
       data.reduce((acc, s) => acc + (s.behavioral_traits?.riskTolerance || 50), 0) / data.length
     )
 
-    // Persona-specific financial-health metrics — only meaningful once we
-    // know whose income/debt we're comparing against.
+    // Financial-health metrics, relative to whichever persona (real or
+    // blended) is currently in focus.
     let savingsRateOfIncome: number | null = null
     let debtToIncomePct: number | null = null
-    if (selectedPersona) {
-      const annualIncomeMid = (selectedPersona.incomeMin + selectedPersona.incomeMax) / 2
+    if (effectivePersona) {
+      const annualIncomeMid = (effectivePersona.incomeMin + effectivePersona.incomeMax) / 2
       const grossMonthlyIncome = annualIncomeMid / 12
       if (grossMonthlyIncome > 0) {
         savingsRateOfIncome = Math.round((avgSaving / grossMonthlyIncome) * 100)
       }
       if (annualIncomeMid > 0) {
-        debtToIncomePct = Math.round((selectedPersona.debt / annualIncomeMid) * 100)
+        debtToIncomePct = Math.round((effectivePersona.debt / annualIncomeMid) * 100)
       }
     }
 
@@ -279,22 +316,7 @@ export default function AnalyticsPage() {
       { label: 'Investing', value: confInvesting },
     ]
 
-    // 4. Consumer / Persona Comparison — average spending per unique persona
-    // name (not per run), so a persona with many runs gets one bar, not a
-    // pile of duplicates under the same label.
-    const spendingByPersona = new Map<string, { total: number; count: number }>()
-    data.forEach((s) => {
-      const name = s.persona_name || 'Unknown'
-      const entry = spendingByPersona.get(name) ?? { total: 0, count: 0 }
-      entry.total += s.decisions?.spending || 0
-      entry.count += 1
-      spendingByPersona.set(name, entry)
-    })
-    const consumerComparison = Array.from(spendingByPersona.entries())
-      .map(([label, { total, count }]) => ({ label, value: Math.round(total / count) }))
-      .slice(0, 5)
-
-    // 4b. Savings rate by scenario — how THIS persona's behavior shifts
+    // 4. Savings rate by scenario — how this persona's behavior shifts
     // across the economic conditions it's been tested under.
     const scenarioGroups = new Map<string, SimulationRecord[]>()
     data.forEach((s) => {
@@ -357,14 +379,13 @@ export default function AnalyticsPage() {
       consistency,
       spendingDistribution,
       confidenceScores,
-      consumerComparison,
       savingsByScenario,
       traitAllocation,
       savingsTrend,
       timelineData,
       runCount: data.length,
     }
-  }, [scopedSimulations, selectedPersona])
+  }, [scopedSimulations, effectivePersona])
 
   return (
     <div className="space-y-6">
@@ -372,9 +393,8 @@ export default function AnalyticsPage() {
         <div>
           <h2 className="font-heading text-3xl font-medium mb-1">Analytics Dashboard</h2>
           <p className="text-muted-foreground">
-            {isAllMode
-              ? 'Live aggregated insights across all your economic behavior simulation runs'
-              : `Behavioral insights for ${selectedPersona?.name ?? 'this persona'}, drawn from its own simulation history`}
+            Behavioral insights for {effectivePersona?.name ?? 'your personas'}, drawn from its own simulation
+            history
           </p>
         </div>
 
@@ -414,12 +434,11 @@ export default function AnalyticsPage() {
         <div className="card-glass p-12 text-center space-y-4 max-w-xl mx-auto my-8">
           <Sparkles className="w-10 h-10 text-primary mx-auto" />
           <h3 className="text-lg font-semibold">
-            {isAllMode ? 'No Simulation Data Yet' : `No Runs Yet for ${selectedPersona?.name ?? 'This Persona'}`}
+            {effectivePersona ? `No Runs Yet for ${effectivePersona.name}` : 'No Simulation Data Yet'}
           </h3>
           <p className="text-sm text-muted-foreground">
-            {isAllMode
-              ? 'Run economic simulations from the dashboard to generate real-time behavioral analytics, comparative metrics, and confidence distributions.'
-              : 'Run a simulation with this persona from the dashboard to see its own spending, saving, and behavioral analytics here.'}
+            Run a simulation from the dashboard to generate real-time behavioral analytics, comparative
+            metrics, and confidence distributions here.
           </p>
           <Button onClick={() => router.push('/dashboard')} className="gap-2">
             Run A Simulation
@@ -427,10 +446,11 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {!isAllMode && selectedPersona && <PersonaStrip persona={selectedPersona} />}
+          {effectivePersona && <PersonaStrip persona={effectivePersona} />}
 
           <div className="space-y-6 min-w-0">
-            {/* Stats Overview */}
+            {/* Stats Overview — same four metrics regardless of focus; only the
+                numbers behind them change. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 icon={BarChart3}
@@ -439,57 +459,41 @@ export default function AnalyticsPage() {
                 change={`${analytics.runCount} run${analytics.runCount === 1 ? '' : 's'}`}
                 changePositive
               />
-              {isAllMode || analytics.savingsRateOfIncome === null ? (
-                <StatCard
-                  icon={LineChart}
-                  label="Savings Ratio"
-                  value={`${analytics.savingsRate}%`}
-                  change={`$${analytics.avgSaving.toLocaleString()}/mo`}
-                  changePositive
-                />
-              ) : (
-                <StatCard
-                  icon={LineChart}
-                  label="Savings/Income"
-                  value={`${analytics.savingsRateOfIncome}%`}
-                  change={`$${analytics.avgSaving.toLocaleString()}/mo of gross pay`}
-                  changePositive={analytics.savingsRateOfIncome >= 15}
-                />
-              )}
-              {isAllMode || analytics.debtToIncomePct === null ? (
-                <StatCard
-                  icon={PieChart}
-                  label="Investment Share"
-                  value={`${analytics.investRate}%`}
-                  change="Portfolio"
-                  changePositive
-                />
-              ) : (
-                <StatCard
-                  icon={PieChart}
-                  label="Debt/Income"
-                  value={`${analytics.debtToIncomePct}%`}
-                  change={analytics.debtToIncomePct <= 36 ? 'Healthy range' : 'Elevated'}
-                  changePositive={analytics.debtToIncomePct <= 36}
-                />
-              )}
-              {isAllMode || analytics.consistency === null ? (
-                <StatCard
-                  icon={BarChart3}
-                  label="Risk Index"
-                  value={`${(analytics.avgRisk / 10).toFixed(1)}/10`}
-                  change="Aggregated"
-                  changePositive
-                />
-              ) : (
-                <StatCard
-                  icon={BarChart3}
-                  label="Consistency"
-                  value={`${analytics.consistency}%`}
-                  change={analytics.consistency >= 70 ? 'Predictable' : 'Scenario-sensitive'}
-                  changePositive={analytics.consistency >= 70}
-                />
-              )}
+              <StatCard
+                icon={LineChart}
+                label="Savings/Income"
+                value={
+                  analytics.savingsRateOfIncome === null ? `${analytics.savingsRate}%` : `${analytics.savingsRateOfIncome}%`
+                }
+                change={`$${analytics.avgSaving.toLocaleString()}/mo of gross pay`}
+                changePositive={(analytics.savingsRateOfIncome ?? analytics.savingsRate) >= 15}
+              />
+              <StatCard
+                icon={PieChart}
+                label="Debt/Income"
+                value={analytics.debtToIncomePct === null ? `${analytics.investRate}%` : `${analytics.debtToIncomePct}%`}
+                change={
+                  analytics.debtToIncomePct === null
+                    ? 'Portfolio'
+                    : analytics.debtToIncomePct <= 36
+                      ? 'Healthy range'
+                      : 'Elevated'
+                }
+                changePositive={analytics.debtToIncomePct === null || analytics.debtToIncomePct <= 36}
+              />
+              <StatCard
+                icon={BarChart3}
+                label="Consistency"
+                value={analytics.consistency === null ? `${(analytics.avgRisk / 10).toFixed(1)}/10` : `${analytics.consistency}%`}
+                change={
+                  analytics.consistency === null
+                    ? 'Risk index'
+                    : analytics.consistency >= 70
+                      ? 'Predictable'
+                      : 'Scenario-sensitive'
+                }
+                changePositive={analytics.consistency === null || analytics.consistency >= 70}
+              />
             </div>
 
             {/* Charts Grid */}
@@ -521,33 +525,20 @@ export default function AnalyticsPage() {
                 <MiniDonutChart data={analytics.traitAllocation} />
               </div>
 
-              {isAllMode ? (
-                <div className="card-glass">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 className="w-4 h-4 text-primary" />
-                    <h3 className="font-medium">Monthly Spending by Persona</h3>
-                  </div>
-                  <MiniBarChart
-                    data={analytics.consumerComparison}
-                    formatValue={(v) => `$${v.toLocaleString()}`}
-                  />
+              <div className="card-glass">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <h3 className="font-medium">Savings Rate by Scenario</h3>
                 </div>
-              ) : (
-                <div className="card-glass">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 className="w-4 h-4 text-primary" />
-                    <h3 className="font-medium">Savings Rate by Scenario</h3>
-                  </div>
-                  {analytics.savingsByScenario.length > 1 ? (
-                    <MiniBarChart data={analytics.savingsByScenario} formatValue={(v) => `${v}%`} />
-                  ) : (
-                    <p className="text-sm text-muted-foreground py-8 text-center">
-                      Run this persona through a second scenario to compare how its savings behavior
-                      shifts across economic conditions.
-                    </p>
-                  )}
-                </div>
-              )}
+                {analytics.savingsByScenario.length > 1 ? (
+                  <MiniBarChart data={analytics.savingsByScenario} formatValue={(v) => `${v}%`} />
+                ) : (
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    Run a second scenario to compare how savings behavior shifts across economic
+                    conditions.
+                  </p>
+                )}
+              </div>
 
               <div className="card-glass">
                 <div className="flex items-center gap-2 mb-4">
