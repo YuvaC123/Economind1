@@ -1,12 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
+import { InfoIconButton } from '@/components/shared/info-icon-button'
 import { TrendingUp, TrendingDown, AlertCircle, Check, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+
+const FIELD_HINTS = {
+  inflation: 'How fast prices rise year over year. Higher inflation pushes personas to spend sooner rather than let cash lose value.',
+  interest: 'The cost of borrowing and the return on savings. Higher rates discourage debt and reward saving.',
+  unemployment: 'Share of the workforce without a job. Higher unemployment raises income uncertainty and typically increases precautionary saving.',
+  volatility: "A 5–50 synthetic index of how unpredictable markets feel in this scenario — not a real-world metric. Higher values make personas more risk-averse toward investing.",
+} as const
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 
@@ -54,6 +63,24 @@ const SCENARIOS: Scenario[] = [
   }
 ]
 
+function HintText({ open, children }: { open: boolean; children: React.ReactNode }) {
+  return (
+    <AnimatePresence initial={false}>
+      {open && (
+        <motion.p
+          initial={{ height: 0, opacity: 0, marginTop: 0 }}
+          animate={{ height: 'auto', opacity: 1, marginTop: 6 }}
+          exit={{ height: 0, opacity: 0, marginTop: 0 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+          className="text-xs text-muted-foreground leading-relaxed overflow-hidden"
+        >
+          {children}
+        </motion.p>
+      )}
+    </AnimatePresence>
+  )
+}
+
 export function ScenarioBuilder() {
   const { token } = useAuth()
   const [selectedScenario, setSelectedScenario] = useState<Scenario>(SCENARIOS[0])
@@ -65,6 +92,8 @@ export function ScenarioBuilder() {
   })
   const [justApplied, setJustApplied] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [openHints, setOpenHints] = useState<Record<string, boolean>>({})
+  const toggleHint = (key: string) => setOpenHints((prev) => ({ ...prev, [key]: !prev[key] }))
 
   const toNum = (v: number | readonly number[]) => (Array.isArray(v) ? v[0] : (v as number))
 
@@ -163,9 +192,11 @@ export function ScenarioBuilder() {
               <label className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-muted-foreground" />
                 Inflation Rate
+                <InfoIconButton open={!!openHints.inflation} onToggle={() => toggleHint('inflation')} label="Inflation Rate" />
               </label>
               <span className="text-sm font-mono font-semibold">{customValues.inflation.toFixed(1)}%</span>
             </div>
+            <HintText open={!!openHints.inflation}>{FIELD_HINTS.inflation}</HintText>
             <Slider
               value={[customValues.inflation]}
               onValueChange={(value) => setCustomValues({ ...customValues, inflation: toNum(value) })}
@@ -181,9 +212,11 @@ export function ScenarioBuilder() {
               <label className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-muted-foreground" />
                 Interest Rate
+                <InfoIconButton open={!!openHints.interest} onToggle={() => toggleHint('interest')} label="Interest Rate" />
               </label>
               <span className="text-sm font-mono font-semibold">{customValues.interest.toFixed(1)}%</span>
             </div>
+            <HintText open={!!openHints.interest}>{FIELD_HINTS.interest}</HintText>
             <Slider
               value={[customValues.interest]}
               onValueChange={(value) => setCustomValues({ ...customValues, interest: toNum(value) })}
@@ -199,9 +232,11 @@ export function ScenarioBuilder() {
               <label className="text-sm font-medium flex items-center gap-2">
                 <TrendingDown className="w-4 h-4 text-muted-foreground" />
                 Unemployment Rate
+                <InfoIconButton open={!!openHints.unemployment} onToggle={() => toggleHint('unemployment')} label="Unemployment Rate" />
               </label>
               <span className="text-sm font-mono font-semibold">{customValues.unemployment.toFixed(1)}%</span>
             </div>
+            <HintText open={!!openHints.unemployment}>{FIELD_HINTS.unemployment}</HintText>
             <Slider
               value={[customValues.unemployment]}
               onValueChange={(value) => setCustomValues({ ...customValues, unemployment: toNum(value) })}
@@ -217,9 +252,11 @@ export function ScenarioBuilder() {
               <label className="text-sm font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-muted-foreground" />
                 Market Volatility
+                <InfoIconButton open={!!openHints.volatility} onToggle={() => toggleHint('volatility')} label="Market Volatility" />
               </label>
               <span className="text-sm font-mono font-semibold">{customValues.volatility.toFixed(0)}</span>
             </div>
+            <HintText open={!!openHints.volatility}>{FIELD_HINTS.volatility}</HintText>
             <Slider
               value={[customValues.volatility]}
               onValueChange={(value) => setCustomValues({ ...customValues, volatility: toNum(value) })}

@@ -463,6 +463,7 @@ export default function AnalyticsPage() {
                 value={`$${analytics.avgSpending.toLocaleString()}`}
                 change={`${analytics.runCount} run${analytics.runCount === 1 ? '' : 's'}`}
                 changePositive
+                hint="Average monthly spending decision across every simulation run in scope."
               />
               <StatCard
                 icon={LineChart}
@@ -472,6 +473,7 @@ export default function AnalyticsPage() {
                 }
                 change={`$${analytics.avgSaving.toLocaleString()}/mo of gross pay`}
                 changePositive={(analytics.savingsRateOfIncome ?? analytics.savingsRate) >= 15}
+                hint="Average monthly saving as a share of gross (pre-tax) monthly income. 15%+ is a commonly cited healthy savings rate."
               />
               <StatCard
                 icon={PieChart}
@@ -485,6 +487,7 @@ export default function AnalyticsPage() {
                       : 'Elevated'
                 }
                 changePositive={analytics.debtToIncomePct === null || analytics.debtToIncomePct <= 36}
+                hint="Total debt as a share of annual income. Lenders typically consider 36% or below a healthy debt-to-income ratio."
               />
               <StatCard
                 icon={BarChart3}
@@ -498,6 +501,7 @@ export default function AnalyticsPage() {
                       : 'Scenario-sensitive'
                 }
                 changePositive={analytics.consistency === null || analytics.consistency >= 70}
+                hint="How little spending varies run to run (100% = identical every time). A low score means this persona reacts strongly to different economic scenarios."
               />
             </div>
 
