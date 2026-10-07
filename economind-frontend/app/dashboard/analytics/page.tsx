@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   BarChart3,
   LineChart,
@@ -16,11 +17,13 @@ import {
   CreditCard,
   Receipt,
   ShieldCheck,
+  LucideIcon,
 } from 'lucide-react'
 import { StatCard } from '@/components/shared/stat-card'
 import { MiniBarChart } from '@/components/charts/mini-bar-chart'
 import { MiniLineChart } from '@/components/charts/mini-line-chart'
 import { MiniDonutChart } from '@/components/charts/mini-donut-chart'
+import { InfoIconButton } from '@/components/shared/info-icon-button'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
 import { Persona } from '@/lib/mock-data'
@@ -147,6 +150,52 @@ function PersonaStrip({ persona }: { persona: Persona }) {
   )
 }
 
+// Every chart card gets the same shape: icon + title + a click-to-reveal
+// plain-language explanation, so a chart someone doesn't immediately
+// recognize (a donut, a trend line) still tells them what it's showing
+// and why it's useful, not just what it's called.
+function ChartCard({
+  icon: Icon,
+  title,
+  hint,
+  open,
+  onToggle,
+  children,
+}: {
+  icon: LucideIcon
+  title: string
+  hint: string
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="card-glass">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className="w-4 h-4 text-primary flex-shrink-0" />
+          <h3 className="font-medium truncate">{title}</h3>
+        </div>
+        <InfoIconButton open={open} onToggle={onToggle} label={title} />
+      </div>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.p
+            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+            animate={{ height: 'auto', opacity: 1, marginTop: 8 }}
+            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+            className="text-xs text-muted-foreground leading-relaxed overflow-hidden"
+          >
+            {hint}
+          </motion.p>
+        )}
+      </AnimatePresence>
+      <div className="mt-4">{children}</div>
+    </div>
+  )
+}
+
 export default function AnalyticsPage() {
   const router = useRouter()
   const { token } = useAuth()
@@ -156,6 +205,8 @@ export default function AnalyticsPage() {
   const hasAutoSelected = useRef(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [openHints, setOpenHints] = useState<Record<string, boolean>>({})
+  const toggleHint = (key: string) => setOpenHints((prev) => ({ ...prev, [key]: !prev[key] }))
 
   useEffect(() => {
     if (!token) return
@@ -426,6 +477,14 @@ export default function AnalyticsPage() {
           Behavioral insights for {effectivePersona?.name ?? 'your personas'}, drawn from its own simulation
           history
         </p>
+        <p className="text-xs text-muted-foreground mt-1.5 max-w-2xl">
+          These numbers come from simulations you&apos;ve run, not real financial data — they show patterns
+          in how this persona tends to behave under different economic conditions. Click the{' '}
+          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-muted-foreground/40 text-[9px] leading-none align-middle mx-0.5">
+            i
+          </span>{' '}
+          next to any card or chart to see what it means.
+        </p>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -505,40 +564,48 @@ export default function AnalyticsPage() {
               />
             </div>
 
-            {/* Charts Grid */}
+            {/* Charts Grid — every card explains itself via its info icon */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="card-glass">
-                <div className="flex items-center gap-2 mb-4">
-                  <PieChart className="w-4 h-4 text-primary" />
-                  <h3 className="font-medium">Capital Allocation Breakdown</h3>
-                </div>
+              <ChartCard
+                icon={PieChart}
+                title="Where the Money Goes"
+                open={!!openHints.allocation}
+                onToggle={() => toggleHint('allocation')}
+                hint="Every simulated dollar, split four ways: spending, saving, investing, and new borrowing. Shows the persona's overall financial priorities across every run in scope."
+              >
                 <MiniDonutChart data={analytics.spendingDistribution} />
-              </div>
+              </ChartCard>
 
-              <div className="card-glass">
-                <div className="flex items-center gap-2 mb-4">
-                  <LineChart className="w-4 h-4 text-primary" />
-                  <h3 className="font-medium">Savings Trajectory (Recent Runs)</h3>
-                </div>
+              <ChartCard
+                icon={LineChart}
+                title="Savings Over Time"
+                open={!!openHints.savingsTrend}
+                onToggle={() => toggleHint('savingsTrend')}
+                hint="Monthly saving decision across the last several simulation runs, in order. Each 'run' is one simulation — a persona tested against one scenario — so this shows whether saving is trending up or down as conditions change."
+              >
                 <MiniLineChart
                   data={analytics.savingsTrend}
                   formatValue={(v) => `$${v.toLocaleString()}`}
                 />
-              </div>
+              </ChartCard>
 
-              <div className="card-glass">
-                <div className="flex items-center gap-2 mb-4">
-                  <PieChart className="w-4 h-4 text-primary" />
-                  <h3 className="font-medium">Behavioral Trait Index</h3>
-                </div>
+              <ChartCard
+                icon={PieChart}
+                title="Psychological Traits"
+                open={!!openHints.traits}
+                onToggle={() => toggleHint('traits')}
+                hint="The AI's read on this persona's decision-making style, 0–100 each: Risk Appetite (comfort with uncertain outcomes), Future Focus (patience for delayed reward over instant gratification), Impulsivity (likelihood of quick, unplanned decisions), and Social Norms (how much peer/market behavior sways their choices)."
+              >
                 <MiniDonutChart data={analytics.traitAllocation} />
-              </div>
+              </ChartCard>
 
-              <div className="card-glass">
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  <h3 className="font-medium">Savings Rate by Scenario</h3>
-                </div>
+              <ChartCard
+                icon={BarChart3}
+                title="Savings Rate by Scenario"
+                open={!!openHints.byScenario}
+                onToggle={() => toggleHint('byScenario')}
+                hint="What share of money went to saving under each economic scenario this persona has been tested against — lets you compare how the same persona reacts to, say, a recession versus a boom."
+              >
                 {analytics.savingsByScenario.length > 1 ? (
                   <MiniBarChart data={analytics.savingsByScenario} formatValue={(v) => `${v}%`} />
                 ) : (
@@ -547,26 +614,30 @@ export default function AnalyticsPage() {
                     conditions.
                   </p>
                 )}
-              </div>
+              </ChartCard>
 
-              <div className="card-glass">
-                <div className="flex items-center gap-2 mb-4">
-                  <LineChart className="w-4 h-4 text-primary" />
-                  <h3 className="font-medium">Spending by Simulation Run</h3>
-                </div>
+              <ChartCard
+                icon={LineChart}
+                title="Spending Over Time"
+                open={!!openHints.spendingTrend}
+                onToggle={() => toggleHint('spendingTrend')}
+                hint="Monthly spending decision across the last several simulation runs, in order — shows whether spending is rising, falling, or holding steady run to run."
+              >
                 <MiniLineChart
                   data={analytics.timelineData}
                   formatValue={(v) => `$${v.toLocaleString()}`}
                 />
-              </div>
+              </ChartCard>
 
-              <div className="card-glass">
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  <h3 className="font-medium">LLM Decision Confidence Scores</h3>
-                </div>
+              <ChartCard
+                icon={BarChart3}
+                title="AI Confidence by Decision"
+                open={!!openHints.confidence}
+                onToggle={() => toggleHint('confidence')}
+                hint="How certain the AI model (the 'LLM' powering these simulations) says it is about each type of decision — not a guarantee the decision is correct, just the model's own self-reported confidence."
+              >
                 <MiniBarChart data={analytics.confidenceScores} formatValue={(v) => `${v}%`} />
-              </div>
+              </ChartCard>
             </div>
           </div>
         </div>
