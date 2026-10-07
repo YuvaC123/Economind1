@@ -191,6 +191,32 @@ function estimateNetIncome(grossAnnualIncome) {
     const effectiveRate = grossAnnualIncome > 0 ? tax / grossAnnualIncome : 0;
     return { tax, net, effectiveRate };
 }
+// ─── Phillips Curve ──────────────────────────────────────────────────────────
+// Short-run Phillips Curve: π = π_e − β(u − u_n) — inflation tends to run
+// above the baseline when unemployment is below its "natural" rate (a tight
+// labor market), and below baseline when unemployment is above it (slack).
+// This relates two SCENARIO inputs (inflation, unemployment), not something
+// the persona decided, so — like tax — it's computed deterministically here
+// rather than left to the LLM to estimate.
+const NATURAL_UNEMPLOYMENT_RATE = 4.5; // %, a commonly-cited NAIRU-ish baseline
+const EXPECTED_INFLATION_BASELINE = 2.0; // %, roughly a central-bank inflation target
+const PHILLIPS_SENSITIVITY = 0.5; // points of inflation per point of unemployment gap
+function computePhillipsCurve(unemploymentRate, actualInflation) {
+    const expectedInflation = EXPECTED_INFLATION_BASELINE - PHILLIPS_SENSITIVITY * (unemploymentRate - NATURAL_UNEMPLOYMENT_RATE);
+    const gap = actualInflation - expectedInflation; // + = inflation running hotter than the curve predicts
+    // Alignment score (0-100): 100 when the scenario sits exactly on the
+    // theoretical curve, decaying as it deviates — a 6-point gap (e.g. a
+    // stagflation scenario with high inflation AND high unemployment) bottoms
+    // out near 0.
+    const alignment = Math.max(0, Math.min(100, Math.round(100 - Math.abs(gap) * 16.7)));
+    return {
+        unemploymentRate,
+        actualInflation,
+        expectedInflation: Math.round(expectedInflation * 10) / 10,
+        gap: Math.round(gap * 10) / 10,
+        alignment,
+    };
+}
 const systemPrompt = `You are EconoMind's behavioral simulation engine.
 
 Given a consumer persona and macroeconomic scenario, simulate how that persona would behave financially.
@@ -198,8 +224,8 @@ Given a consumer persona and macroeconomic scenario, simulate how that persona w
 Persona field definitions (do not confuse these with each other):
 - wealth: total net worth — all assets combined (investments, property equity,
   retirement accounts). This is the big picture, not spendable cash.
-- savings: liquid cash on hand (checking/savings balance) — a slice of wealth,
-  not the same number.
+- savings: liquid cash on hand (checking/savings balance) — a separate number
+  from wealth, set independently; do not assume one bounds the other.
 - debt: total outstanding liabilities (loans, credit cards, mortgage balance).
 - monthly_expenses: recurring baseline costs (rent, bills, groceries) BEFORE
   any of the spending/saving/investing decisions you're making now.
@@ -276,6 +302,15 @@ app.post('/simulate', authMiddleware, async (req, res) => {
             monthly_income_range: [Math.round(incomeMin / 12), Math.round(incomeMax / 12)],
         }
         : persona;
+    // Phillips Curve: relates the scenario's own unemployment and inflation
+    // inputs — independent of the persona, so it's computed once up front and
+    // merged into the response/theory-alignment after the LLM call, the same
+    // way the budget rescale overrides the LLM's arithmetic later.
+    const scenarioUnemployment = typeof scenario['unemployment'] === 'number' ? scenario['unemployment'] : null;
+    const scenarioInflation = typeof scenario['inflation'] === 'number' ? scenario['inflation'] : null;
+    const phillipsCurve = scenarioUnemployment !== null && scenarioInflation !== null
+        ? computePhillipsCurve(scenarioUnemployment, scenarioInflation)
+        : null;
     const userPrompt = `Simulate this consumer persona under this macroeconomic scenario.
 Return ONLY valid JSON. Every string must use double quotes.
 
@@ -342,6 +377,12 @@ ${JSON.stringify(scenario, null, 2)}`;
                 };
             }
         }
+        const llmTheoryAlignment = simulation.theoryAlignment || simulation.theory_alignment || {
+            rationalChoice: 60,
+            behavioralEconomics: 65,
+            keynesianEconomics: 50,
+            austrianEconomics: 45,
+        };
         const normalized = {
             summary: simulation.summary || 'Simulation completed successfully.',
             decisions,
@@ -352,12 +393,11 @@ ${JSON.stringify(scenario, null, 2)}`;
                 impulsivity: 30,
                 socialConformity: 40,
             },
-            theoryAlignment: simulation.theoryAlignment || simulation.theory_alignment || {
-                rationalChoice: 60,
-                behavioralEconomics: 65,
-                keynesianEconomics: 50,
-                austrianEconomics: 45,
-            },
+            // phillipsCurve is never left to the LLM — it's overwritten with the
+            // deterministic score below, same reasoning as the budget rescale.
+            theoryAlignment: phillipsCurve !== null
+                ? { ...llmTheoryAlignment, phillipsCurve: phillipsCurve.alignment }
+                : llmTheoryAlignment,
             reasoning: Array.isArray(simulation.reasoning)
                 ? simulation.reasoning
                 : ['The consumer adjusted financial behavior to align with economic conditions.'],
@@ -396,6 +436,12 @@ ${JSON.stringify(scenario, null, 2)}`;
             annualIncomeMax: incomeMax,
             estimatedTaxRate: taxInfo?.effectiveRate ?? null,
             estimatedAnnualTax: taxInfo?.tax ?? null,
+            // Phillips Curve detail — display-only, like the tax figures above, so
+            // the results page can draw the scenario's point on the curve and
+            // explain the gap. Not persisted (no dedicated column); the alignment
+            // SCORE alone lives on in theoryAlignment.phillipsCurve, which is
+            // persisted and lets analytics track it across runs.
+            phillipsCurve,
         });
     }
     catch (error) {

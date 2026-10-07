@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageTransition } from '@/components/shared/page-transition'
 import { InfoIconButton } from '@/components/shared/info-icon-button'
+import { PhillipsCurveChart } from '@/components/charts/phillips-curve-chart'
 
 // The LLM's JSON response isn't strictly typed - a field can come back as a
 // string, be missing, or be out of range. Never trust it enough to call
@@ -33,6 +34,7 @@ const THEORY_DEFINITIONS: Record<string, string> = {
   behavioralEconomics: 'Real decisions are shaped by cognitive biases and heuristics, not pure rational calculation.',
   keynesianEconomics: 'Spending is driven primarily by current income — consumption rises and falls with take-home pay.',
   austrianEconomics: 'Emphasizes individual choice, time preference, and skepticism of aggregate economic planning.',
+  phillipsCurve: "How closely this scenario's inflation matches what the classic inflation/unemployment trade-off would predict — calculated directly from the scenario's own numbers, not estimated by the AI.",
 }
 
 function definitionFor(map: Record<string, string>, key: string): string {
@@ -458,6 +460,59 @@ function ResultsContent() {
             </Card>
 
           </div>
+
+          {/* Phillips Curve */}
+          {result.phillipsCurve && Number.isFinite(result.phillipsCurve.unemploymentRate) && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle>Phillips Curve</CardTitle>
+                  <InfoIconButton
+                    open={!!openHints.phillipsCurveChart}
+                    onToggle={() => toggleHint('phillipsCurveChart')}
+                    label="Phillips Curve"
+                  />
+                </div>
+                <CardDescription>
+                  The classic trade-off between unemployment and inflation, applied to this scenario
+                </CardDescription>
+                <AnimatePresence initial={false}>
+                  {openHints.phillipsCurveChart && (
+                    <motion.p
+                      initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                      animate={{ height: 'auto', opacity: 1, marginTop: 8 }}
+                      exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                      className="text-xs text-muted-foreground leading-relaxed overflow-hidden"
+                    >
+                      The short-run Phillips Curve says inflation tends to run hot when unemployment is low
+                      (a tight labor market) and cool off when unemployment is high (slack). The purple dot
+                      is this scenario&apos;s actual unemployment and inflation; the grey dot is what the
+                      curve predicts inflation should be at that unemployment rate. A big gap between them
+                      means this scenario doesn&apos;t fit the classic trade-off well — e.g. high inflation
+                      <em> and</em> high unemployment together (&quot;stagflation&quot;) sits far above the
+                      curve.
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </CardHeader>
+
+              <CardContent>
+                <PhillipsCurveChart
+                  unemploymentRate={safeNumber(result.phillipsCurve.unemploymentRate)}
+                  actualInflation={safeNumber(result.phillipsCurve.actualInflation)}
+                  expectedInflation={safeNumber(result.phillipsCurve.expectedInflation)}
+                />
+                <p className="text-xs text-muted-foreground mt-3">
+                  {Math.abs(safeNumber(result.phillipsCurve.gap)) < 0.5
+                    ? 'This scenario sits almost exactly on the theoretical curve.'
+                    : safeNumber(result.phillipsCurve.gap) > 0
+                      ? `Inflation is running ${Math.abs(safeNumber(result.phillipsCurve.gap)).toFixed(1)} points hotter than the curve predicts for this unemployment rate — a stagflation-like pressure.`
+                      : `Inflation is running ${Math.abs(safeNumber(result.phillipsCurve.gap)).toFixed(1)} points cooler than the curve predicts — more slack than the classic trade-off would suggest.`}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Export Section */}
           <div className="flex gap-3 justify-end">

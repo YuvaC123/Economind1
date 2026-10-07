@@ -59,6 +59,7 @@ interface SimulationRecord {
     behavioralEconomics?: number
     keynesianEconomics?: number
     austrianEconomics?: number
+    phillipsCurve?: number
   }
   reasoning: string[]
   createdAt: string
@@ -401,6 +402,32 @@ export default function AnalyticsPage() {
       { label: 'Social Norms', value: avgSocial },
     ]
 
+    // 5b. Economic Theory Fit — how well, on average, these runs align with
+    // each theory. Phillips Curve is averaged only over runs that actually
+    // have it (older simulations predate the field), not defaulted to a
+    // fallback like the others, so it isn't silently dragged toward a
+    // made-up value.
+    const avgTheory = (key: keyof SimulationRecord['theory_alignment'], fallback: number) =>
+      Math.round(data.reduce((acc, s) => acc + (s.theory_alignment?.[key] ?? fallback), 0) / data.length)
+    const phillipsCurveRuns = data
+      .map((s) => s.theory_alignment?.phillipsCurve)
+      .filter((v): v is number => typeof v === 'number')
+
+    const theoryFit = [
+      { label: 'Rational Choice', value: avgTheory('rationalChoice', 60) },
+      { label: 'Behavioral Econ', value: avgTheory('behavioralEconomics', 65) },
+      { label: 'Keynesian', value: avgTheory('keynesianEconomics', 50) },
+      { label: 'Austrian', value: avgTheory('austrianEconomics', 45) },
+      ...(phillipsCurveRuns.length > 0
+        ? [
+            {
+              label: 'Phillips Curve',
+              value: Math.round(phillipsCurveRuns.reduce((a, b) => a + b, 0) / phillipsCurveRuns.length),
+            },
+          ]
+        : []),
+    ]
+
     // 6. Savings Trend Over Recent Runs
     const savingsTrend = [...data]
       .reverse()
@@ -432,6 +459,8 @@ export default function AnalyticsPage() {
       confidenceScores,
       savingsByScenario,
       traitAllocation,
+      theoryFit,
+      phillipsCurveRunCount: phillipsCurveRuns.length,
       savingsTrend,
       timelineData,
       runCount: data.length,
@@ -597,6 +626,21 @@ export default function AnalyticsPage() {
                 hint="The AI's read on this persona's decision-making style, 0–100 each: Risk Appetite (comfort with uncertain outcomes), Future Focus (patience for delayed reward over instant gratification), Impulsivity (likelihood of quick, unplanned decisions), and Social Norms (how much peer/market behavior sways their choices)."
               >
                 <MiniDonutChart data={analytics.traitAllocation} />
+              </ChartCard>
+
+              <ChartCard
+                icon={PieChart}
+                title="Economic Theory Fit"
+                open={!!openHints.theoryFit}
+                onToggle={() => toggleHint('theoryFit')}
+                hint={
+                  'How well these runs fit each economic theory, averaged across every run in scope, 0–100 each: Rational Choice (utility-maximizing), Behavioral Econ (biases over pure logic), Keynesian (spending tracks income), Austrian (individual choice over central planning)' +
+                  (analytics.phillipsCurveRunCount > 0
+                    ? ', and Phillips Curve (how well the scenario’s own inflation/unemployment combo fits the classic trade-off — calculated directly from the numbers, not estimated by the AI).'
+                    : '. Phillips Curve will appear here once a run includes it.')
+                }
+              >
+                <MiniDonutChart data={analytics.theoryFit} />
               </ChartCard>
 
               <ChartCard
