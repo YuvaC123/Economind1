@@ -229,8 +229,8 @@ Given a consumer persona and macroeconomic scenario, simulate how that persona w
 Persona field definitions (do not confuse these with each other):
 - wealth: total net worth — all assets combined (investments, property equity,
   retirement accounts). This is the big picture, not spendable cash.
-- savings: liquid cash on hand (checking/savings balance) — a slice of wealth,
-  not the same number.
+- savings: liquid cash on hand (checking/savings balance) — a separate number
+  from wealth, set independently; do not assume one bounds the other.
 - debt: total outstanding liabilities (loans, credit cards, mortgage balance).
 - monthly_expenses: recurring baseline costs (rent, bills, groceries) BEFORE
   any of the spending/saving/investing decisions you're making now.

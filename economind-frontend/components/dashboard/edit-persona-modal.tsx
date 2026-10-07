@@ -262,7 +262,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             <div>
               <FieldLabel
                 text="Savings ($)"
-                hint="Liquid cash on hand, e.g. checking/savings balance — a slice of wealth, not the whole thing."
+                hint="Liquid cash on hand, e.g. checking/savings balance. A different number from Wealth (total net worth) — set each independently; they aren't required to line up."
               />
               <input
                 type="number"
