@@ -12,10 +12,10 @@ interface PersonaConfigCardProps {
 
 export function PersonaConfigCard({ persona, onEdit }: PersonaConfigCardProps) {
   const stats = [
-    { icon: User, label: 'Age', value: `${persona.age} yrs` },
+    { icon: User, label: 'Age', value: persona.ageBracket },
     {
       icon: Briefcase,
-      label: 'Income',
+      label: 'Take-home',
       value: `$${(persona.incomeMin / 1000).toFixed(0)}K–$${(persona.incomeMax / 1000).toFixed(0)}K`,
     },
     { icon: Home, label: 'Wealth', value: `$${(persona.wealth / 1000).toFixed(0)}K` },

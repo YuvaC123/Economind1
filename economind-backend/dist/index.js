@@ -50,15 +50,42 @@ const SigninSchema = z.object({
     password: z.string().min(1, 'Password is required').max(64, 'Password must not exceed 64 characters'),
 });
 // <<< END: DIRECT SIGNUP SCHEMA >>>
+// Personas are built from categorical ranges, not exact point values, so the
+// same simulation stays valid across the natural variance within a cohort
+// rather than overfitting to one specific number.
+const AGE_BRACKETS = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+// Legacy numeric `age` column is derived from the bracket's floor, purely so
+// any code that still expects a plain number keeps working.
+const AGE_BRACKET_FLOOR = {
+    '18-24': 18,
+    '25-34': 25,
+    '35-44': 35,
+    '45-54': 45,
+    '55-64': 55,
+    '65+': 65,
+};
+// Monthly expenses are set as a proportional band of take-home income, not a
+// bare dollar figure — the frontend computes the actual $ amount from a
+// slider constrained to the band's percentage range and sends that number;
+// the band itself is kept only as display/context metadata.
+const EXPENSE_BANDS = ['lean', 'moderate', 'comfortable', 'high'];
 const PersonaBaseSchema = z.object({
     name: z.string().trim().min(1, 'Persona name is required').max(50, 'Persona name must not exceed 50 characters'),
-    age: z.number().int('Age must be a whole number').min(1, 'Age must be at least 1').max(120, 'Age cannot exceed 120'),
+    age_bracket: z.enum(AGE_BRACKETS),
     gender: z.string().trim().max(30).optional().nullable(),
     education: z.string().trim().max(50).optional().nullable(),
+    // income_min/income_max are TAKE-HOME (after-tax, after-deductions) pay —
+    // comparable across tax jurisdictions, unlike gross pay. See systemPrompt
+    // and the "EconoMind Decision Algorithm" write-up for the rationale.
     income_min: z.number().min(0, 'Income cannot be negative').max(100_000_000, 'Income exceeds maximum limit ($100M)'),
     income_max: z.number().min(0, 'Income cannot be negative').max(100_000_000, 'Income exceeds maximum limit ($100M)'),
-    savings: z.number().min(0, 'Savings cannot be negative').max(100_000_000, 'Savings exceeds maximum limit ($100M)'),
+    // Savings split by time horizon — each horizon behaves differently under
+    // macro stress, so a single aggregate number hides that signal.
+    savings_short_term: z.number().min(0, 'Short-term savings cannot be negative').max(100_000_000, 'Short-term savings exceeds maximum limit ($100M)'),
+    savings_mid_term: z.number().min(0, 'Mid-term savings cannot be negative').max(100_000_000, 'Mid-term savings exceeds maximum limit ($100M)'),
+    savings_long_term: z.number().min(0, 'Long-term savings cannot be negative').max(100_000_000, 'Long-term savings exceeds maximum limit ($100M)'),
     monthly_expenses: z.number().min(0, 'Monthly expenses cannot be negative').max(10_000_000, 'Monthly expenses exceeds limit ($10M)'),
+    expense_band: z.enum(EXPENSE_BANDS),
     wealth: z.number().min(-10_000_000, 'Wealth is below minimum limit').max(1_000_000_000, 'Wealth exceeds limit ($1B)'),
     debt: z.number().min(0, 'Debt cannot be negative').max(100_000_000, 'Debt exceeds maximum limit ($100M)'),
     risk_appetite: z.string().min(1, 'Risk appetite is required').max(30),
@@ -155,42 +182,16 @@ app.post("/signin", async (req, res) => {
         return res.status(500).json({ msg: "Internal server error", error });
     }
 });
-// ─── Tax estimate ────────────────────────────────────────────────────────────
-// Simplified single-filer US federal brackets (2024) + standard deduction.
-// No state tax, no credits, no filing-status nuance — this is a simulation
-// estimate, not tax advice, and is labeled as such everywhere it surfaces.
-// The point: take-home pay, not gross income, is what a person actually has
-// to spend/save/invest, so the budget identity below must balance against
-// NET income or the whole simulation overstates what's available.
-const STANDARD_DEDUCTION_2024 = 14_600;
-const FEDERAL_BRACKETS_2024 = [
-    { upTo: 11_600, rate: 0.1 },
-    { upTo: 47_150, rate: 0.12 },
-    { upTo: 100_525, rate: 0.22 },
-    { upTo: 191_950, rate: 0.24 },
-    { upTo: 243_725, rate: 0.32 },
-    { upTo: 609_350, rate: 0.35 },
-    { upTo: Infinity, rate: 0.37 },
-];
-function estimateFederalTax(grossAnnualIncome) {
-    const taxable = Math.max(0, grossAnnualIncome - STANDARD_DEDUCTION_2024);
-    let tax = 0;
-    let lastCap = 0;
-    for (const bracket of FEDERAL_BRACKETS_2024) {
-        if (taxable <= lastCap)
-            break;
-        const amountInBracket = Math.min(taxable, bracket.upTo) - lastCap;
-        tax += amountInBracket * bracket.rate;
-        lastCap = bracket.upTo;
-    }
-    return Math.round(tax);
-}
-function estimateNetIncome(grossAnnualIncome) {
-    const tax = estimateFederalTax(grossAnnualIncome);
-    const net = Math.max(0, grossAnnualIncome - tax);
-    const effectiveRate = grossAnnualIncome > 0 ? tax / grossAnnualIncome : 0;
-    return { tax, net, effectiveRate };
-}
+// ─── Income ───────────────────────────────────────────────────────────────────
+// income_min/income_max are TAKE-HOME pay (after income tax and all statutory
+// deductions) directly, as entered by the user — not gross pay with tax
+// estimated downstream. Take-home is what's actually comparable across tax
+// jurisdictions (two people with different gross pay in different states can
+// have identical take-home pay) and what funds the budget identity below
+// directly, so there is no tax step here. See the "EconoMind Decision
+// Algorithm" write-up for the full rationale and how this sets up future
+// state-level modeling (deriving an equivalent gross from a target net,
+// rather than the other way around).
 // ─── Phillips Curve ──────────────────────────────────────────────────────────
 // Short-run Phillips Curve: π = π_e − β(u − u_n) — inflation tends to run
 // above the baseline when unemployment is below its "natural" rate (a tight
@@ -222,15 +223,39 @@ const systemPrompt = `You are EconoMind's behavioral simulation engine.
 Given a consumer persona and macroeconomic scenario, simulate how that persona would behave financially.
 
 Persona field definitions (do not confuse these with each other):
-- wealth: total net worth — all assets combined (investments, property equity,
-  retirement accounts). This is the big picture, not spendable cash.
-- savings: liquid cash on hand (checking/savings balance) — a separate number
-  from wealth, set independently; do not assume one bounds the other.
+- age_bracket: a demographic cohort (e.g. "25-34"), not one exact age —
+  reason about this persona as representative of that range, not a single year.
+- wealth: total net worth — all assets combined (investments, property
+  equity, retirement accounts), minus liabilities. This is NOT spendable
+  cash, but it IS a shock-resilience buffer: a persona with HIGH wealth
+  relative to income should react to adverse scenarios (inflation spikes,
+  rate hikes, recession) with MORE STABLE, less reactive decisions — they
+  can absorb the shock from existing assets without much behavior change. A
+  persona with LOW wealth relative to income should react with MORE
+  VOLATILE, more reactive decisions — they have little buffer, so a shock
+  hits their budget directly. (Example: a high-income but low-wealth
+  persona is vulnerable to a rate spike; a low-income but high-wealth
+  persona may absorb the same shock with minimal behavioral change.)
+- savings_short_term: liquid cash for the next 0-12 months (emergency fund,
+  near-term purchases) — highly sensitive to inflation and rate changes;
+  the pool most likely to be drawn down or protected first under stress.
+- savings_mid_term: earmarked for 1-5 year goals (a home deposit, a
+  vehicle) — moderately sensitive; may shift between asset classes under
+  macro stress, but isn't an emergency buffer.
+- savings_long_term: retirement/generational wealth, 5+ years out — least
+  sensitive to short-run shocks (inflation, a single rate hike), more
+  sensitive to structural/long-run trends (AI-driven productivity shifts,
+  demographic change). Don't let one bad quarter move this much.
 - debt: total outstanding liabilities (loans, credit cards, mortgage balance).
+- expense_band: a qualitative tier (lean/moderate/comfortable/high) for how
+  much of income monthly_expenses already consumes — context for how much
+  slack this persona has before any of today's decisions.
 - monthly_expenses: recurring baseline costs (rent, bills, groceries) BEFORE
   any of the spending/saving/investing decisions you're making now.
-- monthly_income: take-home pay after estimated tax — the actual budget to
-  allocate via your decisions (see budget identity below).
+- monthly_income: take-home pay, exactly as entered by the user — this is
+  ALREADY net of income tax and all deductions. There is no tax to apply;
+  use it as-is as the actual budget to allocate via your decisions (see
+  budget identity below).
 
 CRITICAL JSON RULES:
 - Output ONLY a single valid JSON object. No markdown. No text before or after.
@@ -243,12 +268,17 @@ Simulation rules:
 - Ground every number in the persona's traits and scenario conditions.
 - decisions are monthly dollar amounts (spending, saving, borrowing, investing).
 - Budget identity is mandatory: spending + saving + investing MUST equal
-  monthly_income + borrowing (money in must equal money out). The persona
-  object's "monthly_income" is already NET of estimated tax — it is the
-  actual take-home pay available to budget, not gross income. Use it as-is;
-  do not apply tax again. "monthly_income_gross" and "estimated_tax_rate"
-  are given only for context in your reasoning. Do not invent spending power
-  from nowhere, and do not leave money unaccounted for.
+  monthly_income + borrowing (money in must equal money out). monthly_income
+  is already take-home pay (net), exactly as the user entered it — do not
+  apply any tax to it, and do not treat it as gross. Do not invent spending
+  power from nowhere, and do not leave money unaccounted for.
+- Let the SPLIT across savings_short_term / savings_mid_term /
+  savings_long_term — not just their total — inform the saving decision: a
+  persona with most savings already in savings_short_term has a buffer and
+  may lean toward investing more; a persona with little savings_short_term
+  but a lot in savings_long_term may prioritize rebuilding a short-term
+  buffer first under a stressful scenario, even at the cost of long-term
+  contributions.
 - confidence values are between 0 and 1.
 - behavioralTraits and theoryAlignment values are between 0 and 100.
 
@@ -283,22 +313,16 @@ app.post('/simulate', authMiddleware, async (req, res) => {
     // (and the post-hoc rescale) needs a single anchor, so we use the
     // midpoint — but the LLM gets the full range too, for richer reasoning
     // about uncertainty ("could be anywhere from $X to $Y").
+    // income_min/income_max are TAKE-HOME pay directly (see the Income comment
+    // above the Phillips Curve section) — no tax step needed here.
     const incomeMin = typeof persona['income_min'] === 'number' ? persona['income_min'] : null;
     const incomeMax = typeof persona['income_max'] === 'number' ? persona['income_max'] : null;
     const annualIncome = incomeMin !== null && incomeMax !== null ? (incomeMin + incomeMax) / 2 : null;
-    // Tax matters: a budget balanced against gross pay overstates what's
-    // actually available to spend/save/invest. Estimate take-home (net) income
-    // and anchor the budget identity on THAT, not gross.
-    const taxInfo = annualIncome !== null ? estimateNetIncome(annualIncome) : null;
-    const annualIncomeNet = taxInfo !== null ? taxInfo.net : null;
-    const monthlyIncomeGross = annualIncome !== null ? annualIncome / 12 : null;
-    const monthlyIncome = annualIncomeNet !== null ? annualIncomeNet / 12 : null; // the actual rescale anchor — NET
+    const monthlyIncome = annualIncome !== null ? annualIncome / 12 : null; // the rescale anchor — already net
     const personaForPrompt = monthlyIncome !== null
         ? {
             ...persona,
             monthly_income: Math.round(monthlyIncome * 100) / 100,
-            monthly_income_gross: Math.round(monthlyIncomeGross * 100) / 100,
-            estimated_tax_rate: Math.round(taxInfo.effectiveRate * 1000) / 1000,
             monthly_income_range: [Math.round(incomeMin / 12), Math.round(incomeMax / 12)],
         }
         : persona;
@@ -327,7 +351,12 @@ ${JSON.stringify(scenario, null, 2)}`;
             ],
             model: process.env.GROQ_MODEL || 'groq/compound',
             temperature: 0.1,
-            max_completion_tokens: 1024,
+            // The persona field definitions grew substantially (wealth's shock-
+            // resilience role, three savings-horizon definitions, age brackets,
+            // expense bands) — 1024 was tight enough that theoryAlignment and
+            // reasoning (the last two fields in the JSON) were getting truncated
+            // and silently falling back to defaults. Verified: raising this fixed it.
+            max_completion_tokens: 2048,
             response_format: { type: 'json_object' },
         });
         let raw = completion.choices[0]?.message.content ?? '';
@@ -421,22 +450,17 @@ ${JSON.stringify(scenario, null, 2)}`;
         catch (persistErr) {
             console.error('[SIMULATE DB PERSIST ERROR]:', persistErr);
         }
-        // Income/tax figures are returned for display only (e.g. the results
-        // page's "gross -> tax -> net" breakdown) — not persisted, since the
-        // Simulation table has no columns for them. monthlyIncome is NET (the
-        // actual budget anchor); monthlyIncomeGross and estimatedTaxRate exist
-        // so the frontend can show the tax bite rather than just the result.
+        // Income figures are returned for display only (e.g. the results page's
+        // "this persona's take-home pay" line) — not persisted, since the
+        // Simulation table has no columns for them. monthlyIncome/annualIncome
+        // are take-home pay directly, as entered — no tax figures to report.
         return res.status(200).json({
             ...normalized,
             monthlyIncome,
-            monthlyIncomeGross,
             annualIncome,
-            annualIncomeNet,
             annualIncomeMin: incomeMin,
             annualIncomeMax: incomeMax,
-            estimatedTaxRate: taxInfo?.effectiveRate ?? null,
-            estimatedAnnualTax: taxInfo?.tax ?? null,
-            // Phillips Curve detail — display-only, like the tax figures above, so
+            // Phillips Curve detail — display-only, same reasoning as above, so
             // the results page can draw the scenario's point on the curve and
             // explain the gap. Not persisted (no dedicated column); the alignment
             // SCORE alone lives on in theoryAlignment.phillipsCurve, which is
@@ -505,11 +529,14 @@ app.post('/new-persona', authMiddleware, async (req, res) => {
         return res.status(400).json({ msg: 'Validation failed', errors: parsed.error.issues });
     }
     try {
-        // "income" stays populated as the midpoint for any legacy consumer of the
-        // single-number field; income_min/income_max are the source of truth now.
+        // "income"/"age"/"savings" stay populated as legacy derived values for
+        // any code that still expects a single number — income_min/income_max,
+        // age_bracket, and the three savings horizons are the source of truth now.
         const income = (parsed.data.income_min + parsed.data.income_max) / 2;
+        const age = AGE_BRACKET_FLOOR[parsed.data.age_bracket];
+        const savings = parsed.data.savings_short_term + parsed.data.savings_mid_term + parsed.data.savings_long_term;
         const persona = await prisma.persona.create({
-            data: { ...parsed.data, income, user_id: req.userId },
+            data: { ...parsed.data, income, age, savings, user_id: req.userId },
         });
         return res.status(200).json({ msg: 'Persona creation successful.', persona });
     }
@@ -528,13 +555,25 @@ app.patch('/personas/:id', authMiddleware, async (req, res) => {
         if (!existing || existing.user_id !== req.userId) {
             return res.status(404).json({ msg: 'Persona not found' });
         }
-        const { income_min, income_max } = parsed.data;
+        const { income_min, income_max, age_bracket, savings_short_term, savings_mid_term, savings_long_term } = parsed.data;
         const incomeUpdate = income_min !== undefined && income_max !== undefined
             ? { income: (income_min + income_max) / 2 }
             : {};
+        const ageUpdate = age_bracket !== undefined ? { age: AGE_BRACKET_FLOOR[age_bracket] } : {};
+        // Recompute the legacy sum from whichever horizons this request updates,
+        // falling back to the persona's existing stored value for any horizon
+        // not included in this particular partial update.
+        const savingsProvided = savings_short_term !== undefined || savings_mid_term !== undefined || savings_long_term !== undefined;
+        const savingsUpdate = savingsProvided
+            ? {
+                savings: (savings_short_term ?? existing.savings_short_term ?? 0) +
+                    (savings_mid_term ?? existing.savings_mid_term ?? 0) +
+                    (savings_long_term ?? existing.savings_long_term ?? 0),
+            }
+            : {};
         const persona = await prisma.persona.update({
             where: { id: personaId },
-            data: { ...parsed.data, ...incomeUpdate },
+            data: { ...parsed.data, ...incomeUpdate, ...ageUpdate, ...savingsUpdate },
         });
         return res.status(200).json({ msg: 'Persona updated', persona });
     }

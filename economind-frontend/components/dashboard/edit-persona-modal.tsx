@@ -6,7 +6,15 @@ import { X, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { InfoIconButton } from '@/components/shared/info-icon-button'
-import { Persona } from '@/lib/mock-data'
+import {
+  AGE_BRACKETS,
+  AGE_BRACKET_FLOOR,
+  EXPENSE_BANDS,
+  EXPENSE_BAND_RANGE,
+  EXPENSE_BAND_LABELS,
+  ExpenseBand,
+  Persona,
+} from '@/lib/mock-data'
 
 // Covers the typical persona range with real precision; the number input
 // next to it still accepts anything up to the $100M validation ceiling.
@@ -55,13 +63,30 @@ function FieldLabel({ text, hint, trailing }: { text: string; hint: string; trai
   )
 }
 
+function monthlyIncomeOf(p: Pick<Persona, 'incomeMin' | 'incomeMax'>): number {
+  return (p.incomeMin + p.incomeMax) / 2 / 12
+}
+
 export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalProps) {
   const [form, setForm] = useState<Persona | null>(persona)
   const [validationError, setValidationError] = useState<string | null>(null)
+  // The expense slider works in percent-of-income within the selected band;
+  // the dollar amount sent to the API is derived from this, not the other
+  // way around.
+  const [expensePct, setExpensePct] = useState(0)
 
   useEffect(() => {
     setForm(persona)
     setValidationError(null)
+    if (persona) {
+      const income = monthlyIncomeOf(persona)
+      const raw = income > 0 ? Math.round((persona.monthlyExpenses / income) * 100) : bandMidpoint(persona.expenseBand)
+      // Clamp to the selected band's own range — a persona's stored dollar
+      // figure and its band label can drift out of sync (e.g. legacy data),
+      // and the slider itself can't visually show a value outside its band.
+      const [bandMin, bandMax] = EXPENSE_BAND_RANGE[persona.expenseBand]
+      setExpensePct(Math.max(Math.round(bandMin * 100), Math.min(Math.round(bandMax * 100), raw)))
+    }
   }, [persona])
 
   useEffect(() => {
@@ -80,6 +105,33 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev))
   }
 
+  const updateSavingsHorizon = (
+    key: 'savingsShortTerm' | 'savingsMidTerm' | 'savingsLongTerm',
+    value: number
+  ) => {
+    setValidationError(null)
+    setForm((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, [key]: value }
+      return { ...next, savings: next.savingsShortTerm + next.savingsMidTerm + next.savingsLongTerm }
+    })
+  }
+
+  const monthlyIncome = monthlyIncomeOf(form)
+
+  const updateExpenseBand = (band: ExpenseBand) => {
+    const pct = bandMidpoint(band)
+    setExpensePct(pct)
+    setValidationError(null)
+    setForm((prev) => (prev ? { ...prev, expenseBand: band, monthlyExpenses: Math.round((pct / 100) * monthlyIncomeOf(prev)) } : prev))
+  }
+
+  const updateExpensePct = (pct: number) => {
+    setExpensePct(pct)
+    setValidationError(null)
+    setForm((prev) => (prev ? { ...prev, monthlyExpenses: Math.round((pct / 100) * monthlyIncomeOf(prev)) } : prev))
+  }
+
   const handleSave = () => {
     if (!form.name.trim()) {
       setValidationError('Persona name is required')
@@ -87,10 +139,6 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
     }
     if (form.name.length > 50) {
       setValidationError('Persona name cannot exceed 50 characters')
-      return
-    }
-    if (form.age < 1 || form.age > 120) {
-      setValidationError('Age must be between 1 and 120')
       return
     }
     if (form.incomeMin < 0 || form.incomeMax < 0) {
@@ -101,7 +149,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
       setValidationError('Income max must be greater than or equal to income min')
       return
     }
-    if (form.savings < 0) {
+    if (form.savingsShortTerm < 0 || form.savingsMidTerm < 0 || form.savingsLongTerm < 0) {
       setValidationError('Savings cannot be negative')
       return
     }
@@ -117,9 +165,12 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
     onSave({
       ...form,
       name: form.name.trim(),
+      age: AGE_BRACKET_FLOOR[form.ageBracket],
     })
     onClose()
   }
+
+  const expenseRange = EXPENSE_BAND_RANGE[form.expenseBand]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -162,16 +213,21 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
 
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="text-sm font-medium">Age</label>
-              <input
-                type="number"
-                required
-                min={1}
-                max={120}
-                value={form.age}
-                onChange={(e) => update('age', Number(e.target.value))}
-                className={numericFieldClass}
+              <FieldLabel
+                text="Age"
+                hint="A cohort, not one exact age — personas stay valid across the natural variance within an age range rather than overfitting to a single year."
               />
+              <select
+                value={form.ageBracket}
+                onChange={(e) => update('ageBracket', e.target.value as Persona['ageBracket'])}
+                className={fieldClass}
+              >
+                {AGE_BRACKETS.map((bracket) => (
+                  <option key={bracket} value={bracket}>
+                    {bracket}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <FieldLabel text="Risk appetite" hint="How much investment risk they're comfortable taking." />
@@ -190,7 +246,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
           <div>
             <FieldLabel
               text="Income range ($/yr)"
-              hint="Gross (before-tax) annual income. The simulation estimates taxes and budgets from take-home pay, not this raw figure."
+              hint="Take-home (after-tax, after-deductions) annual income — what actually lands in the bank, not gross pay. This is what's comparable across tax jurisdictions and what funds the budget directly."
               trailing={
                 <span className="text-sm font-mono font-semibold text-primary">
                   ${form.incomeMin.toLocaleString()} – ${form.incomeMax.toLocaleString()}
@@ -247,7 +303,7 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
             <div>
               <FieldLabel
                 text="Wealth ($)"
-                hint="Total net worth — all assets combined (investments, property equity, retirement accounts)."
+                hint="Total net worth — all assets combined (investments, property equity, retirement accounts), minus liabilities. A shock-resilience buffer: high wealth relative to income means a persona can absorb a rate spike or recession with less behavior change; low wealth means the same shock hits harder."
               />
               <input
                 type="number"
@@ -259,24 +315,6 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 className={numericFieldClass}
               />
             </div>
-            <div>
-              <FieldLabel
-                text="Savings ($)"
-                hint="Liquid cash on hand, e.g. checking/savings balance. A different number from Wealth (total net worth) — set each independently; they aren't required to line up."
-              />
-              <input
-                type="number"
-                required
-                min={0}
-                max={100000000}
-                value={form.savings}
-                onChange={(e) => update('savings', Number(e.target.value))}
-                className={numericFieldClass}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-5">
             <div>
               <FieldLabel
                 text="Debt ($)"
@@ -292,20 +330,101 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
                 className={numericFieldClass}
               />
             </div>
-            <div>
-              <FieldLabel
-                text="Monthly expenses ($)"
-                hint="Recurring monthly costs — rent, bills, groceries — before any spending the simulation decides."
-              />
-              <input
-                type="number"
-                required
-                min={0}
-                max={10000000}
-                value={form.monthlyExpenses}
-                onChange={(e) => update('monthlyExpenses', Number(e.target.value))}
-                className={numericFieldClass}
-              />
+          </div>
+
+          <div>
+            <FieldLabel
+              text="Savings, by horizon ($)"
+              hint="Split by time horizon because each behaves differently under economic stress — a single aggregate number hides that. Short-term is the emergency buffer, drawn down first; long-term is retirement money that shouldn't move much over one bad quarter."
+              trailing={
+                <span className="text-sm font-mono font-semibold text-primary">
+                  ${form.savings.toLocaleString()} total
+                </span>
+              }
+            />
+            <div className="grid grid-cols-3 gap-3 mt-2.5">
+              <div>
+                <label className="text-xs text-muted-foreground">Short-term (0-12mo)</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  max={100000000}
+                  value={form.savingsShortTerm}
+                  onChange={(e) => updateSavingsHorizon('savingsShortTerm', Number(e.target.value))}
+                  className="mt-1 w-full px-2.5 py-2 border border-border rounded-md text-xs font-mono tabular-nums bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  title="Emergency fund, near-term purchases — highly sensitive to inflation and rate changes"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Mid-term (1-5yr)</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  max={100000000}
+                  value={form.savingsMidTerm}
+                  onChange={(e) => updateSavingsHorizon('savingsMidTerm', Number(e.target.value))}
+                  className="mt-1 w-full px-2.5 py-2 border border-border rounded-md text-xs font-mono tabular-nums bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  title="Goals like a home deposit or a vehicle — moderately sensitive to macro stress"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Long-term (5yr+)</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  max={100000000}
+                  value={form.savingsLongTerm}
+                  onChange={(e) => updateSavingsHorizon('savingsLongTerm', Number(e.target.value))}
+                  className="mt-1 w-full px-2.5 py-2 border border-border rounded-md text-xs font-mono tabular-nums bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  title="Retirement, generational wealth — least sensitive to short-run shocks"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <FieldLabel
+              text="Monthly expenses"
+              hint="Set as a share of take-home income within a band, not a bare dollar figure — recurring baseline costs (rent, bills, groceries) before any spending the simulation decides."
+              trailing={
+                <span className="text-sm font-mono font-semibold text-primary">
+                  ${form.monthlyExpenses.toLocaleString()}/mo
+                </span>
+              }
+            />
+            <div className="grid grid-cols-4 gap-2 mt-2.5">
+              {EXPENSE_BANDS.map((band) => (
+                <button
+                  key={band}
+                  type="button"
+                  onClick={() => updateExpenseBand(band)}
+                  className={`px-2 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-colors ${
+                    form.expenseBand === band
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/30'
+                  }`}
+                >
+                  {EXPENSE_BAND_LABELS[band]}
+                </button>
+              ))}
+            </div>
+            <Slider
+              className="mt-3 mb-1"
+              value={[expensePct]}
+              onValueChange={(v) => updateExpensePct(Array.isArray(v) ? v[0] : (v as number))}
+              min={Math.round(expenseRange[0] * 100)}
+              max={Math.round(expenseRange[1] * 100)}
+              step={1}
+            />
+            <div className="flex items-center justify-between mt-1.5">
+              <span className="text-xs text-muted-foreground">{Math.round(expenseRange[0] * 100)}%</span>
+              <span className="text-xs text-muted-foreground">
+                {expensePct}% of take-home pay (${Math.round(monthlyIncome).toLocaleString()}/mo)
+              </span>
+              <span className="text-xs text-muted-foreground">{Math.round(expenseRange[1] * 100)}%</span>
             </div>
           </div>
         </div>
@@ -322,4 +441,9 @@ export function EditPersonaModal({ persona, onClose, onSave }: EditPersonaModalP
       </div>
     </div>
   )
+}
+
+function bandMidpoint(band: ExpenseBand): number {
+  const [min, max] = EXPENSE_BAND_RANGE[band]
+  return Math.round(((min + max) / 2) * 100)
 }

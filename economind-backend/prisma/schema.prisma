@@ -24,14 +24,22 @@ model User{
 model Persona{
   id String @id @default(uuid())
   name String
+  // age is a legacy derived value (the bracket's floor) kept for any code
+  // that still wants a plain number; age_bracket is the source of truth.
   age Int
+  age_bracket String?
   gender String?
   education String?
   income Float
   income_min Float?
   income_max Float?
+  // savings is a legacy derived sum of the three horizons below.
   savings Float
+  savings_short_term Float?
+  savings_mid_term Float?
+  savings_long_term Float?
   monthly_expenses Float
+  expense_band String?
   wealth Float
   debt Float
   risk_appetite String

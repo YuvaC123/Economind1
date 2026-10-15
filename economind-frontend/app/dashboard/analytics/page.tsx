@@ -26,7 +26,7 @@ import { MiniDonutChart } from '@/components/charts/mini-donut-chart'
 import { InfoIconButton } from '@/components/shared/info-icon-button'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
-import { Persona } from '@/lib/mock-data'
+import { Persona, inferAgeBracket, inferExpenseBand } from '@/lib/mock-data'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 const ALL_PERSONAS = 'all'
@@ -71,6 +71,7 @@ interface ApiPersona {
   id: string
   name: string
   age: number
+  age_bracket?: string | null
   gender?: string | null
   education?: string | null
   income: number
@@ -78,8 +79,12 @@ interface ApiPersona {
   income_max: number | null
   wealth: number
   savings: number
+  savings_short_term?: number | null
+  savings_mid_term?: number | null
+  savings_long_term?: number | null
   debt: number
   monthly_expenses: number
+  expense_band?: string | null
   risk_appetite: string
   spending_behavior?: string | null
   saving_preference?: string | null
@@ -87,18 +92,28 @@ interface ApiPersona {
 }
 
 function fromApiPersona(p: ApiPersona): Persona {
+  const incomeMin = p.income_min ?? p.income
+  const incomeMax = p.income_max ?? p.income
+  const monthlyIncome = (incomeMin + incomeMax) / 2 / 12
+  const hasHorizons =
+    p.savings_short_term != null || p.savings_mid_term != null || p.savings_long_term != null
   return {
     id: p.id,
     name: p.name,
     age: p.age,
+    ageBracket: (p.age_bracket as Persona['ageBracket']) ?? inferAgeBracket(p.age),
     gender: (p.gender as Persona['gender']) ?? 'other',
     education: (p.education as Persona['education']) ?? 'bachelors',
-    incomeMin: p.income_min ?? p.income,
-    incomeMax: p.income_max ?? p.income,
+    incomeMin,
+    incomeMax,
     wealth: p.wealth,
     savings: p.savings,
+    savingsShortTerm: p.savings_short_term ?? (hasHorizons ? 0 : p.savings / 3),
+    savingsMidTerm: p.savings_mid_term ?? (hasHorizons ? 0 : p.savings / 3),
+    savingsLongTerm: p.savings_long_term ?? (hasHorizons ? 0 : p.savings / 3),
     debt: p.debt,
     monthlyExpenses: p.monthly_expenses,
+    expenseBand: (p.expense_band as Persona['expenseBand']) ?? inferExpenseBand(p.monthly_expenses, monthlyIncome),
     riskAppetite: (p.risk_appetite as Persona['riskAppetite']) ?? 'moderate',
     spendingBehavior: (p.spending_behavior as Persona['spendingBehavior']) ?? 'balanced',
     savingPreference: (p.saving_preference as Persona['savingPreference']) ?? 'retirement',
@@ -119,10 +134,10 @@ function stdev(values: number[]): number {
 // its full width instead of being squeezed into a narrow sidebar column.
 function PersonaStrip({ persona }: { persona: Persona }) {
   const chips = [
-    { icon: Users, label: 'Age', value: `${persona.age}` },
+    { icon: Users, label: 'Age', value: persona.ageBracket },
     {
       icon: Briefcase,
-      label: 'Income',
+      label: 'Take-home',
       value: `$${(persona.incomeMin / 1000).toFixed(0)}K–$${(persona.incomeMax / 1000).toFixed(0)}K`,
     },
     { icon: Home, label: 'Wealth', value: `$${(persona.wealth / 1000).toFixed(0)}K` },
@@ -261,18 +276,27 @@ export default function AnalyticsPage() {
     const riskAppetite = (Object.entries(riskCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ??
       'moderate') as Persona['riskAppetite']
 
+    const avgAge = avg((p) => p.age)
     return {
       id: ALL_PERSONAS,
       name: `All ${n} Persona${n === 1 ? '' : 's'}`,
-      age: avg((p) => p.age),
+      age: avgAge,
+      ageBracket: inferAgeBracket(avgAge),
       gender: 'other',
       education: 'bachelors',
       incomeMin: avg((p) => p.incomeMin),
       incomeMax: avg((p) => p.incomeMax),
       wealth: avg((p) => p.wealth),
       savings: avg((p) => p.savings),
+      savingsShortTerm: avg((p) => p.savingsShortTerm),
+      savingsMidTerm: avg((p) => p.savingsMidTerm),
+      savingsLongTerm: avg((p) => p.savingsLongTerm),
       debt: avg((p) => p.debt),
       monthlyExpenses: avg((p) => p.monthlyExpenses),
+      expenseBand: inferExpenseBand(
+        avg((p) => p.monthlyExpenses),
+        avg((p) => (p.incomeMin + p.incomeMax) / 2 / 12)
+      ),
       riskAppetite,
       spendingBehavior: 'balanced',
       savingPreference: 'retirement',
@@ -319,10 +343,12 @@ export default function AnalyticsPage() {
     let savingsRateOfIncome: number | null = null
     let debtToIncomePct: number | null = null
     if (effectivePersona) {
+      // incomeMin/incomeMax are take-home pay directly — no gross/net split
+      // to compute here.
       const annualIncomeMid = (effectivePersona.incomeMin + effectivePersona.incomeMax) / 2
-      const grossMonthlyIncome = annualIncomeMid / 12
-      if (grossMonthlyIncome > 0) {
-        savingsRateOfIncome = Math.round((avgSaving / grossMonthlyIncome) * 100)
+      const monthlyTakeHome = annualIncomeMid / 12
+      if (monthlyTakeHome > 0) {
+        savingsRateOfIncome = Math.round((avgSaving / monthlyTakeHome) * 100)
       }
       if (annualIncomeMid > 0) {
         debtToIncomePct = Math.round((effectivePersona.debt / annualIncomeMid) * 100)
@@ -559,9 +585,9 @@ export default function AnalyticsPage() {
                 value={
                   analytics.savingsRateOfIncome === null ? `${analytics.savingsRate}%` : `${analytics.savingsRateOfIncome}%`
                 }
-                change={`$${analytics.avgSaving.toLocaleString()}/mo of gross pay`}
+                change={`$${analytics.avgSaving.toLocaleString()}/mo of take-home pay`}
                 changePositive={(analytics.savingsRateOfIncome ?? analytics.savingsRate) >= 15}
-                hint="Average monthly saving as a share of gross (pre-tax) monthly income. 15%+ is a commonly cited healthy savings rate."
+                hint="Average monthly saving as a share of take-home (net) monthly income. 15%+ is a commonly cited healthy savings rate."
               />
               <StatCard
                 icon={PieChart}

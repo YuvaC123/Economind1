@@ -668,13 +668,18 @@ export declare const PersonaScalarFieldEnum: {
     readonly id: 'id';
     readonly name: 'name';
     readonly age: 'age';
+    readonly age_bracket: 'age_bracket';
     readonly gender: 'gender';
     readonly education: 'education';
     readonly income: 'income';
     readonly income_min: 'income_min';
     readonly income_max: 'income_max';
     readonly savings: 'savings';
+    readonly savings_short_term: 'savings_short_term';
+    readonly savings_mid_term: 'savings_mid_term';
+    readonly savings_long_term: 'savings_long_term';
     readonly monthly_expenses: 'monthly_expenses';
+    readonly expense_band: 'expense_band';
     readonly wealth: 'wealth';
     readonly debt: 'debt';
     readonly risk_appetite: 'risk_appetite';

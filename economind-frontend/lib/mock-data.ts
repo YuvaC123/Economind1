@@ -1,15 +1,76 @@
+// Personas are built from categorical ranges, not exact point values, so the
+// same simulation stays valid across the variance within a cohort. These
+// mirror the brackets/bands defined server-side in economind-backend/index.ts.
+export const AGE_BRACKETS = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'] as const
+export type AgeBracket = (typeof AGE_BRACKETS)[number]
+// Legacy numeric `age` is derived from the bracket's floor, for any display
+// that still wants a plain number.
+export const AGE_BRACKET_FLOOR: Record<AgeBracket, number> = {
+  '18-24': 18,
+  '25-34': 25,
+  '35-44': 35,
+  '45-54': 45,
+  '55-64': 55,
+  '65+': 65,
+}
+
+// Monthly expenses are set as a % of take-home income within a band, via a
+// slider constrained to that band's range — not a bare dollar figure.
+export const EXPENSE_BANDS = ['lean', 'moderate', 'comfortable', 'high'] as const
+export type ExpenseBand = (typeof EXPENSE_BANDS)[number]
+export const EXPENSE_BAND_RANGE: Record<ExpenseBand, [number, number]> = {
+  lean: [0.1, 0.25],
+  moderate: [0.25, 0.45],
+  comfortable: [0.45, 0.65],
+  high: [0.65, 0.85],
+}
+export const EXPENSE_BAND_LABELS: Record<ExpenseBand, string> = {
+  lean: 'Lean',
+  moderate: 'Moderate',
+  comfortable: 'Comfortable',
+  high: 'High',
+}
+
+// Fallbacks for personas created before this field existed — the API may
+// still return `age_bracket`/`expense_band` as null for those rows.
+export function inferAgeBracket(age: number): AgeBracket {
+  if (age < 25) return '18-24'
+  if (age < 35) return '25-34'
+  if (age < 45) return '35-44'
+  if (age < 55) return '45-54'
+  if (age < 65) return '55-64'
+  return '65+'
+}
+
+export function inferExpenseBand(monthlyExpenses: number, monthlyIncome: number): ExpenseBand {
+  const pct = monthlyIncome > 0 ? monthlyExpenses / monthlyIncome : 0.35
+  if (pct < EXPENSE_BAND_RANGE.lean[1]) return 'lean'
+  if (pct < EXPENSE_BAND_RANGE.moderate[1]) return 'moderate'
+  if (pct < EXPENSE_BAND_RANGE.comfortable[1]) return 'comfortable'
+  return 'high'
+}
+
 export interface Persona {
   id: string
   name: string
+  // age is a legacy derived value (the bracket's floor); ageBracket is the
+  // source of truth.
   age: number
+  ageBracket: AgeBracket
   gender: 'male' | 'female' | 'other'
   education: 'high-school' | 'bachelors' | 'masters' | 'phd'
+  // Take-home (after-tax, after-deductions) annual income range — not gross.
   incomeMin: number
   incomeMax: number
   wealth: number
+  // savings is a legacy derived sum of the three horizons below.
   savings: number
+  savingsShortTerm: number
+  savingsMidTerm: number
+  savingsLongTerm: number
   debt: number
   monthlyExpenses: number
+  expenseBand: ExpenseBand
   riskAppetite: 'conservative' | 'moderate' | 'aggressive'
   spendingBehavior: 'frugal' | 'balanced' | 'lavish'
   savingPreference: 'emergency' | 'retirement' | 'investment'
@@ -72,14 +133,19 @@ export const DEFAULT_PERSONA: Persona = {
   id: 'persona-1',
   name: 'John Doe',
   age: 35,
+  ageBracket: '35-44',
   gender: 'male',
   education: 'masters',
   incomeMin: 75000,
   incomeMax: 95000,
   wealth: 250000,
   savings: 45000,
+  savingsShortTerm: 15000,
+  savingsMidTerm: 15000,
+  savingsLongTerm: 15000,
   debt: 15000,
   monthlyExpenses: 3500,
+  expenseBand: 'comfortable', // ~49% of take-home pay
   riskAppetite: 'moderate',
   spendingBehavior: 'balanced',
   savingPreference: 'retirement',

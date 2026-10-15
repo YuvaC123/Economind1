@@ -165,41 +165,19 @@ function ResultsContent() {
                 <div className="mt-4 pt-4 border-t border-border">
                   <p className="text-xs text-muted-foreground">
                     Based on a ${Math.round(safeNumber(result.annualIncomeMin)).toLocaleString()}–$
-                    {Math.round(safeNumber(result.annualIncomeMax)).toLocaleString()}/yr income range
-                    {' '}(${Math.round(safeNumber(result.annualIncome)).toLocaleString()}/yr at the midpoint) —
-                    every dollar figure below is a <span className="font-semibold">monthly</span> amount, and
-                    spending + saving + investing is balanced to equal <span className="font-semibold">net</span> monthly
-                    income + borrowing, not gross.
+                    {Math.round(safeNumber(result.annualIncomeMax)).toLocaleString()}/yr take-home income
+                    range (${Math.round(safeNumber(result.annualIncome)).toLocaleString()}/yr at the
+                    midpoint) — every dollar figure below is a{' '}
+                    <span className="font-semibold">monthly</span> amount, and spending + saving +
+                    investing is balanced to equal monthly take-home income + borrowing.
                   </p>
 
-                  {Number.isFinite(result.estimatedTaxRate) && (
-                    <div className="grid grid-cols-3 gap-3 mt-3">
-                      <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-center">
-                        <p className="text-[10px] uppercase text-muted-foreground">Gross /mo</p>
-                        <p className="text-sm font-mono font-semibold mt-0.5">
-                          ${Math.round(safeNumber(result.monthlyIncomeGross)).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-center">
-                        <p className="text-[10px] uppercase text-muted-foreground">Est. tax</p>
-                        <p className="text-sm font-mono font-semibold mt-0.5 text-red-400">
-                          −{(safeNumber(result.estimatedTaxRate) * 100).toFixed(0)}%
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-center">
-                        <p className="text-[10px] uppercase text-muted-foreground">Net /mo</p>
-                        <p className="text-sm font-mono font-semibold mt-0.5 text-primary">
-                          ${Math.round(safeNumber(result.monthlyIncome)).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
-                    Tax is a simplified estimate (US federal single-filer brackets + standard
-                    deduction only — no state tax, credits, or deductions) for simulation
-                    purposes, not tax advice.
-                  </p>
+                  <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-center mt-3 max-w-[160px]">
+                    <p className="text-[10px] uppercase text-muted-foreground">Take-home /mo</p>
+                    <p className="text-sm font-mono font-semibold mt-0.5 text-primary">
+                      ${Math.round(safeNumber(result.monthlyIncome)).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>

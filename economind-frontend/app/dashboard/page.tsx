@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { DEFAULT_PERSONA, PREDEFINED_SCENARIOS, Persona } from '@/lib/mock-data'
+import { DEFAULT_PERSONA, PREDEFINED_SCENARIOS, Persona, inferAgeBracket, inferExpenseBand } from '@/lib/mock-data'
 import { PersonaConfigCard } from '@/components/dashboard/persona-config-card'
 import { MacroeconomicCard } from '@/components/dashboard/macroeconomic-card'
 import { EditPersonaModal } from '@/components/dashboard/edit-persona-modal'
@@ -24,17 +24,23 @@ interface ApiPersona {
   id: string
   name: string
   age: number
+  age_bracket?: string | null
   gender?: string | null
   education?: string | null
   // income_min/max are nullable — personas created before the income-range
   // feature shipped only have the legacy single "income" value in the DB.
+  // income_min/income_max are take-home pay directly (not gross).
   income: number
   income_min: number | null
   income_max: number | null
   wealth: number
   savings: number
+  savings_short_term?: number | null
+  savings_mid_term?: number | null
+  savings_long_term?: number | null
   debt: number
   monthly_expenses: number
+  expense_band?: string | null
   risk_appetite: string
   spending_behavior?: string | null
   saving_preference?: string | null
@@ -42,18 +48,28 @@ interface ApiPersona {
 }
 
 function fromApiPersona(p: ApiPersona): Persona {
+  const incomeMin = p.income_min ?? p.income
+  const incomeMax = p.income_max ?? p.income
+  const monthlyIncome = (incomeMin + incomeMax) / 2 / 12
+  const hasHorizons =
+    p.savings_short_term != null || p.savings_mid_term != null || p.savings_long_term != null
   return {
     id: p.id,
     name: p.name,
     age: p.age,
+    ageBracket: (p.age_bracket as Persona['ageBracket']) ?? inferAgeBracket(p.age),
     gender: (p.gender as Persona['gender']) ?? 'other',
     education: (p.education as Persona['education']) ?? 'bachelors',
-    incomeMin: p.income_min ?? p.income,
-    incomeMax: p.income_max ?? p.income,
+    incomeMin,
+    incomeMax,
     wealth: p.wealth,
     savings: p.savings,
+    savingsShortTerm: p.savings_short_term ?? (hasHorizons ? 0 : p.savings / 3),
+    savingsMidTerm: p.savings_mid_term ?? (hasHorizons ? 0 : p.savings / 3),
+    savingsLongTerm: p.savings_long_term ?? (hasHorizons ? 0 : p.savings / 3),
     debt: p.debt,
     monthlyExpenses: p.monthly_expenses,
+    expenseBand: (p.expense_band as Persona['expenseBand']) ?? inferExpenseBand(p.monthly_expenses, monthlyIncome),
     riskAppetite: (p.risk_appetite as Persona['riskAppetite']) ?? 'moderate',
     spendingBehavior: (p.spending_behavior as Persona['spendingBehavior']) ?? 'balanced',
     savingPreference: (p.saving_preference as Persona['savingPreference']) ?? 'retirement',
@@ -137,13 +153,16 @@ export default function DashboardPage() {
           scenario_name: selectedScenario.name,
           persona: {
             name: persona.name,
-            age: persona.age,
+            age_bracket: persona.ageBracket,
             income_min: persona.incomeMin,
             income_max: persona.incomeMax,
-            savings: persona.savings,
+            savings_short_term: persona.savingsShortTerm,
+            savings_mid_term: persona.savingsMidTerm,
+            savings_long_term: persona.savingsLongTerm,
             wealth: persona.wealth,
             debt: persona.debt,
             monthly_expenses: persona.monthlyExpenses,
+            expense_band: persona.expenseBand,
             risk_appetite: persona.riskAppetite,
           },
           scenario: {
